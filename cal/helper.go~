@@ -16,6 +16,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
+	"strings"
 )
 
 // getClient uses a Context and Config to retrieve a Token
@@ -90,12 +91,13 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func main() {
+func getCalendar() (*v3.Service, error) {
 	ctx := context.Background()
 
 	b, err := ioutil.ReadFile("client_secret.json")
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
+		return nil, err
 	}
 
 	// If modifying these scopes, delete your previously saved credentials
@@ -103,36 +105,55 @@ func main() {
 	config, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		return nil, err
 	}
 	client := getClient(ctx, config)
 
 	srv, err := calendar.New(client)
+
+	return srv, err
+}
+
+func retrieveEvents(srv *v3.Service, maxEvents int) (list v3.EventsListCall, err error) {
+	t := time.Now().Format(time.RFC3339)
+	return srv.Events.List("primary").ShowDeleted(false).SingleEvents(true).TimeMin(t).MaxResults(maxEvents).OrderBy("startTime").Do()
+}
+
+func main() {
+	srv, err := getCalendar()
 	if err != nil {
 		log.Fatalf("Unable to retrieve calendar Client %v", err)
 	}
 
-	t := time.Now().Format(time.RFC3339)
-	events, err := srv.Events.List("primary").ShowDeleted(false).
-		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
-	if err != nil {
-		log.Fatalf("Unable to retrieve next ten of the user's events. %v", err)
-	}
+	events, err := retrieveEvents(srv, 10)
 
 	fmt.Println("Upcoming events:")
-	if len(events.Items) > 0 {
-		for _, i := range events.Items {
-			var when string
-			// If the DateTime is an empty string the Event is an all-day Event.
-			// So only Date is available.
-			if i.Start.DateTime != "" {
-				when = i.Start.DateTime
-			} else {
-				when = i.Start.Date
-			}
-			fmt.Printf("%s (%s)\n", i.Summary, when)
-		}
-	} else {
+	if len(events.Items) == 0 {
 		fmt.Printf("No upcoming events found.\n")
+		return
 	}
-
+	var (
+		isAllDay bool
+		hour     int
+		minute   int
+		second   int
+	)
+	for _, i := range events.Items {
+		var when string
+		// If the DateTime is an empty string the Event is an all-day Event.
+		// So only Date is available.
+		if i.Start.DateTime != "" {
+			when = i.Start.DateTime
+			//Dates are formatted according to RFC3339
+			weNeed := strings.Split(strings.Split(when, "T")[1], "-")[0]
+			fmt.Fscanf(strings.NewReader(weNeed), "%d:%d:%d", &hour, &minute, &second)
+			isAllDay = false
+			fmt.Printf("Hour: %d, Minute: %d, Second: %d ", hour, minute, second)
+		} else {
+			when = i.Start.Date
+			isAllDay = true
+		}
+		fmt.Printf("Is all day: %v ", isAllDay)
+		fmt.Printf("%s (%s)\n", i.Summary, when)
+	}
 }
