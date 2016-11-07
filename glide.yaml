@@ -1,2 +1,6 @@
 package: github.com/sscheele/hallo
-import: []
+import:
+- package: google.golang.org/api
+  subpackages:
+  - calendar/v3
+- package: github.com/xlab/pocketsphinx-go
