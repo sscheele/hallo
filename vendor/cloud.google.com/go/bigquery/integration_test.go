@@ -111,6 +111,33 @@ func TestIntegration_TableMetadata(t *testing.T) {
 	}
 }
 
+func TestIntegration_DatasetMetadata(t *testing.T) {
+	if client == nil {
+		t.Skip("Integration tests skipped")
+	}
+	ctx := context.Background()
+	md, err := dataset.Metadata(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := md.ID, fmt.Sprintf("%s:%s", dataset.ProjectID, dataset.DatasetID); got != want {
+		t.Errorf("ID: got %q, want %q", got, want)
+	}
+	jan2016 := time.Date(2016, 1, 1, 0, 0, 0, 0, time.UTC)
+	if md.CreationTime.Before(jan2016) {
+		t.Errorf("CreationTime: got %s, want > 2016-1-1", md.CreationTime)
+	}
+	if md.LastModifiedTime.Before(jan2016) {
+		t.Errorf("LastModifiedTime: got %s, want > 2016-1-1", md.LastModifiedTime)
+	}
+
+	// Verify that we get a NotFound for a nonexistent dataset.
+	_, err = client.Dataset("does_not_exist").Metadata(ctx)
+	if err == nil || !hasStatusCode(err, http.StatusNotFound) {
+		t.Errorf("got %v, want NotFound error", err)
+	}
+}
+
 func TestIntegration_Tables(t *testing.T) {
 	if client == nil {
 		t.Skip("Integration tests skipped")
@@ -224,14 +251,27 @@ func TestIntegration_UploadAndRead(t *testing.T) {
 	}
 	checkRead(t, "job.Read", rit, wantRows)
 
-	// Test MapLoader
+	// Test reading directly into a []Value.
 	valueLists, err := readAll(table.Read(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
 	it := table.Read(ctx)
+	for i, vl := range valueLists {
+		var got []Value
+		if err := it.Next(&got); err != nil {
+			t.Fatal(err)
+		}
+		want := []Value(vl)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%d: got %v, want %v", i, got, want)
+		}
+	}
+
+	// Test reading into a map.
+	it = table.Read(ctx)
 	for _, vl := range valueLists {
-		var vm ValueMap
+		var vm map[string]Value
 		err := it.Next(&vm)
 		if err == iterator.Done {
 			break
@@ -240,7 +280,7 @@ func TestIntegration_UploadAndRead(t *testing.T) {
 			t.Fatal(err)
 		}
 		if got, want := len(vm), len(vl); got != want {
-			t.Fatalf("ValueMap len: got %d, want %d", got, want)
+			t.Fatalf("valueMap len: got %d, want %d", got, want)
 		}
 		for i, v := range vl {
 			if got, want := vm[schema[i].Name], v; got != want {
