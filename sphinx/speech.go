@@ -1,11 +1,10 @@
-package main
+package sphinx
 
 import (
+	"errors"
 	"log"
-	"os"
 	"unsafe"
 
-	"github.com/jawher/mow.cli"
 	"github.com/xlab/closer"
 	"github.com/xlab/pocketsphinx-go/sphinx"
 	"github.com/xlab/portaudio-go/portaudio"
@@ -19,54 +18,37 @@ const (
 )
 
 var (
-	app     = cli.App("gortana", "Goratana is a dumb personal assistant to test how CMUSphinx works from Golang.")
-	hmm     = app.StringOpt("hmm", "/usr/local/share/pocketsphinx/model/en-us/en-us", "Sets directory containing acoustic model files.")
-	dict    = app.StringOpt("dict", "/usr/local/share/pocketsphinx/model/en-us/cmudict-en-us.dict", "Sets main pronunciation dictionary (lexicon) input file..")
-	lm      = app.StringOpt("lm", "/usr/local/share/pocketsphinx/model/en-us/en-us.lm.bin", "Sets word trigram language model input file.")
-	logfile = app.StringOpt("log", "gortana.log", "Log file to write log to.")
-	stdout  = app.BoolOpt("stdout", false, "Disables log file and writes everything to stdout.")
-	outraw  = app.StringOpt("outraw", "", "Specify output dir for RAW recorded sound files (s16le). Directory must exist.")
+	hmm  = "/usr/local/share/pocketsphinx/model/en-us/en-us"              //Sets directory containing acoustic model files for sphinx.
+	dict = "/usr/local/share/pocketsphinx/model/en-us/cmudict-en-us.dict" //Sets main pronunciation dictionary (lexicon) input file..
+	lm   = "/usr/local/share/pocketsphinx/model/en-us/en-us.lm.bin"       //Sets word trigram language model input file.
 )
 
-func main() {
-	log.SetFlags(0)
-	app.Action = appRun
-	app.Run(os.Args)
-}
-
-func appRun() {
+//AppRun is essentially main
+func AppRun() error {
 	defer closer.Close()
 	closer.Bind(func() {
 		log.Println("Bye!")
 	})
 	if err := portaudio.Initialize(); paError(err) {
-		log.Fatalln("PortAudio init error:", paErrorText(err))
+		return err
 	}
 	closer.Bind(func() {
 		if err := portaudio.Terminate(); paError(err) {
-			log.Println("PortAudio term error:", paErrorText(err))
+			return err
 		}
 	})
 
 	// Init CMUSphinx
 	cfg := sphinx.NewConfig(
-		sphinx.HMMDirOption(*hmm),
-		sphinx.DictFileOption(*dict),
-		sphinx.LMFileOption(*lm),
+		sphinx.HMMDirOption(hmm),
+		sphinx.DictFileOption(dict),
+		sphinx.LMFileOption(lm),
 		sphinx.SampleRateOption(sampleRate),
 	)
-	if len(*outraw) > 0 {
-		sphinx.RawLogDirOption(*outraw)(cfg)
-	}
-	if *stdout == false {
-		sphinx.LogFileOption(*logfile)(cfg)
-	}
 
-	log.Println("Loading CMU PhocketSphinx.")
-	log.Println("This may take a while depending on the size of your model.")
 	dec, err := sphinx.NewDecoder(cfg)
 	if err != nil {
-		closer.Fatalln(err)
+		return err
 	}
 	closer.Bind(func() {
 		dec.Destroy()
@@ -76,30 +58,28 @@ func appRun() {
 	}
 
 	var stream *portaudio.Stream
-	if err := portaudio.OpenDefaultStream(&stream, channels, 0, sampleFormat, sampleRate,
-		samplesPerChannel, l.paCallback, nil); paError(err) {
-		log.Fatalln("PortAudio error:", paErrorText(err))
+	if err := portaudio.OpenDefaultStream(&stream, channels, 0, sampleFormat, sampleRate, samplesPerChannel, l.paCallback, nil); paError(err) {
+		return err
 	}
 	closer.Bind(func() {
 		if err := portaudio.CloseStream(stream); paError(err) {
-			log.Println("[WARN] PortAudio error:", paErrorText(err))
+			return err
 		}
 	})
 
 	if err := portaudio.StartStream(stream); paError(err) {
-		log.Fatalln("PortAudio error:", paErrorText(err))
+		return err
 	}
 	closer.Bind(func() {
 		if err := portaudio.StopStream(stream); paError(err) {
-			log.Fatalln("[WARN] PortAudio error:", paErrorText(err))
+			return err
 		}
 	})
 
 	if !dec.StartUtt() {
-		closer.Fatalln("[ERR] Sphinx failed to start utterance")
+		return errors.New("[ERR] Sphinx failed to start utterance")
 	}
 	log.Println(banner)
-	log.Println("Ready..")
 	closer.Hold()
 }
 
@@ -147,10 +127,9 @@ func (l *Listener) paCallback(input unsafe.Pointer, _ unsafe.Pointer, sampleCoun
 func (l *Listener) report() {
 	hyp, _ := l.dec.Hypothesis()
 	if len(hyp) > 0 {
-		log.Printf("    > hypothesis: %s", hyp)
-		return
+		//log.Printf("    > hypothesis: %s", hyp)
+		//TODO: HANDLE USER INPUT HERE!!!
 	}
-	log.Println("ah, nothing")
 }
 
 func paError(err portaudio.Error) bool {
@@ -162,7 +141,6 @@ func paErrorText(err portaudio.Error) string {
 }
 
 const banner = `
- __                 
-/ _  _  _|_ _  _  _ 
-\__)(_)| |_(_|| )(_|
+ |_| _ | | _
+ | |(_|| |(_)
 `
