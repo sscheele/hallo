@@ -16,21 +16,40 @@ const banner = `
 `
 
 func main() {
+	initScreen()
+	ch := make(chan string)
+	go runClock(ch)
+	for i := 0; ; i++ {
+		ch <- fmt.Sprint(i)
+	}
+}
+
+func runClock(ch chan string) {
+	dataStrs := make([]string, numDataRows)
+	for {
+		t := time.Now()
+		select {
+		case x, ok := <-ch:
+			if ok {
+				dataStrs = append(dataStrs[1:], x)
+			} else {
+				return
+			}
+		default:
+
+		}
+
+		updateScreen(fmt.Sprintf("%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second()), dataStrs)
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func initScreen() {
 	cmd := exec.Command("clear")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
 
 	fmt.Print(banner)
-
-	dataStrs := make([]string, numDataRows)
-	for i := 0; ; i++ {
-		t := time.Now()
-
-		dataStrs = append(dataStrs[1:], fmt.Sprintf("%d", i))
-
-		updateScreen(fmt.Sprintf("%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second()), dataStrs)
-		time.Sleep(1 * time.Second)
-	}
 }
 
 func updateScreen(timeField string, dataFields []string) {
