@@ -23,6 +23,10 @@ Finally, grab Sphinx:
 $ export PKG_CONFIG_PATH=path/to/sphinxbase:path/to/pocketsphinx
 $ go get github.com/xlab/pocketsphinx-go/sphinx
 ```
+Before running the program, you'll need to also include your 
+libraries in the path:
+```export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/localib```
+
 
 The paths to pocketsphinx and sphinxbase are the paths which 
 contain `pocketsphinx.pc` and `sphinxbase.pc`.
