@@ -4,4 +4,3 @@ import:
   subpackages:
   - calendar/v3
 - package: github.com/xlab/pocketsphinx-go
-- package: googlemaps.github.io/maps

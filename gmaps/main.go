@@ -15,7 +15,7 @@ var (
 	apiKey       string
 	origin       = "Perth"         //place of origin
 	destination  = "Sydney"        //destination coordinates/address
-	arrivalTime  = "1479244765"    //arrival time (seconds since epoch)
+	arrivalTime  = "1480543258"    //arrival time (seconds since epoch)
 	alternatives = false           //find alternative routes
 	avoid        = "tolls|ferries" //valid values are tolls, highways, ferries, | separated
 	trafficModel = "best_guess"    //valid values are optimistic, best_guess, and pessimistic.

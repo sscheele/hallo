@@ -1,57 +1,18 @@
-hash: 2e6379122619562b85d6217a1fbdcafbf9f7adaf097b59493fc300adf518194c
-updated: 2016-11-09T11:03:39.292921362-05:00
+hash: 457d0a6c444ac2c262aacdaa283b222f4bd8a76f4643be791a33ea41ab5b8388
+updated: 2016-11-09T16:49:11.876422786-05:00
 imports:
-- name: cloud.google.com/go
-  version: b4053c3bff6e22c56441b24738dc8431847a22e6
-  subpackages:
-  - compute/metadata
-  - internal
-- name: github.com/golang/protobuf
-  version: 4bd1920723d7b7c925de087aa32e2187708897f7
-  subpackages:
-  - proto
-- name: github.com/xlab/closer
-  version: ce9b1b86d22d595bc9c16142c6e47a9a154d005c
 - name: github.com/xlab/pocketsphinx-go
-  version: a273c769ca7dc827ca5ad839bbb9303d50a03070
-  subpackages:
-  - sphinx
-  - pocketsphinx
-- name: github.com/xlab/portaudio-go
-  version: 1d1526abf2efb0c6c8fd08928aa021378b017bc8
-  subpackages:
-  - portaudio
+  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
 - name: golang.org/x/net
-  version: 40d3034e575b6eafbca34e64224da61de35ae04c
+  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
   subpackages:
   - context
   - context/ctxhttp
-- name: golang.org/x/oauth2
-  version: d5040cddfc0da40b408c9a1da4728662435176a9
-  subpackages:
-  - google
-  - internal
-  - jws
-  - jwt
 - name: google.golang.org/api
-  version: 6bc9e77383320b75dcd6810569b6d54b2e84019d
+  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
   subpackages:
   - calendar/v3
   - gensupport
   - googleapi
   - googleapi/internal/uritemplates
-- name: google.golang.org/appengine
-  version: c7b8227c83007befd67b324a64c969ebc1d7475d
-  subpackages:
-  - urlfetch
-  - internal
-  - internal/urlfetch
-  - internal/app_identity
-  - internal/modules
-  - internal/base
-  - internal/datastore
-  - internal/log
-  - internal/remote_api
-- name: googlemaps.github.io/maps
-  version: e366342489b05393aae6fc199782c43abc5b37d1
 testImports: []
