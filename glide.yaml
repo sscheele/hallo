@@ -4,3 +4,4 @@ import:
   subpackages:
   - calendar/v3
 - package: github.com/xlab/pocketsphinx-go
+- package: github.com/nsf/termbox-go
