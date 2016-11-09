@@ -139,8 +139,3 @@ func paError(err portaudio.Error) bool {
 func paErrorText(err portaudio.Error) string {
 	return portaudio.GetErrorText(err)
 }
-
-const banner = `
- |_| _ | | _
- | |(_|| |(_)
-`

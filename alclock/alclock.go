@@ -12,9 +12,8 @@ import (
 )
 
 const numDataRows = 4
-const banner = ` |_| _ | | _
- | |(_|| |(_)
-`
+
+var banner = []string{" |_| _ | | _ ", " | |(_|| |(_)"}
 
 type Alarm struct {
 	//DateTime should have the following indices: "year", "month", "day", "hour", "minute", "second"
@@ -31,20 +30,7 @@ func main() {
 	//initScreen()
 
 	ch = make(chan string)
-	/*
-		for {
-			x, _ := cursorPos()
-			fmt.Print(x)
-			time.Sleep(2 * time.Second)
-		}
-	*/
 	runClock(ch)
-	/*
-		//put test numbers into the data field to show it's working
-		for i := 0; ; i++ {
-			ch <- fmt.Sprint(i)
-		}
-	*/
 }
 
 func runClock(ch chan string) {
@@ -67,12 +53,21 @@ func runClock(ch chan string) {
 	}
 }
 
+func moveCursorTo(x, y int) {
+	fmt.Printf("\033[%d;%dH", y, x)
+}
+
 func initScreen() {
 	cmd := exec.Command("clear")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
 
-	fmt.Print(banner)
+	/*
+		moveCursorTo(1, 1)
+		fmt.Print(banner[0])
+		moveCursorTo(1, 2)
+		fmt.Print(banner[1])
+	*/
 }
 
 func updateScreen(timeField string, dataFields []string) {
@@ -83,14 +78,15 @@ func updateScreen(timeField string, dataFields []string) {
 	if err != nil {
 		fmt.Println("Error getting terminal size")
 	}
-	fmt.Printf("\033[%d;%dH", height/2, width/2)
+	moveCursorTo(width/2, height/2)
 	fmt.Print(timeField)
 
 	for i, s := range dataFields {
-		fmt.Printf("\033[%d;0H", (height-numDataRows)+i)
+		moveCursorTo(0, (height-numDataRows)+i)
 		fmt.Print(s)
 	}
-	fmt.Printf("\033[%d;%dH", height, x)
+
+	moveCursorTo(x, height)
 }
 
 func termSize() (x int, y int, err error) {
@@ -125,23 +121,28 @@ func cursorPos(height, width int) (x int, err error) {
 
 	// by printing the command output, we are triggering input
 	fmt.Print(randomBytes)
-	text, _ := reader.ReadString('R') // how to get this to not require manual newline?
+	text, _ := reader.ReadString('R')
 	text = trimPreJunk(text)
 
 	disableRaw := exec.Command("stty", "-raw")
 	disableRaw.Stdin = os.Stdin
 	disableRaw.Run()
 
-	for i := 2; i < height; i++ {
-		fmt.Printf("\033[%d;0H", i)
-		fmt.Printf(fmt.Sprintf("%% %ds", width-1), "")
+	for i := 3; i < height; i++ {
+		moveCursorTo(0, i)
+		fmt.Printf(fmt.Sprintf("%% -%ds", width), "")
 	}
-	fmt.Printf("\033[%d;0H", 0)
-	fmt.Print(banner)
+	/*
+		moveCursorTo(1, 1)
+		fmt.Print(banner[0])
+		moveCursorTo(1, 2)
+		fmt.Print(banner[1])
+	*/
 
 	fmt.Fscanf(strings.NewReader(text), "%dR", &x)
-	fmt.Printf("\033[%d;%dH", height, x)
-	fmt.Printf(fmt.Sprintf("%% %ds", width-x), "")
+	moveCursorTo(x, height)
+	fmt.Printf(fmt.Sprintf("%% -%ds", width-x), "")
+
 	go func() {
 		ch <- fmt.Sprintf("Cursor pos is (%d, %d)", x, height)
 	}()
