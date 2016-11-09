@@ -1,30 +1,28 @@
-hash: 457d0a6c444ac2c262aacdaa283b222f4bd8a76f4643be791a33ea41ab5b8388
-updated: 2016-11-07T19:54:28.484341354-05:00
+hash: 2e6379122619562b85d6217a1fbdcafbf9f7adaf097b59493fc300adf518194c
+updated: 2016-11-09T11:03:39.292921362-05:00
 imports:
 - name: cloud.google.com/go
-  version: 9fd7589225cc80551105e3be70902e09710798f8
+  version: b4053c3bff6e22c56441b24738dc8431847a22e6
   subpackages:
   - compute/metadata
   - internal
 - name: github.com/golang/protobuf
-  version: 2bc9827a78f95c6665b5fe0abd1fd66b496ae2d8
+  version: 4bd1920723d7b7c925de087aa32e2187708897f7
   subpackages:
   - proto
-- name: github.com/jawher/mow.cli
-  version: 660b9261e2c80bb92e5a0eaa581596084656140e
 - name: github.com/xlab/closer
   version: ce9b1b86d22d595bc9c16142c6e47a9a154d005c
 - name: github.com/xlab/pocketsphinx-go
   version: a273c769ca7dc827ca5ad839bbb9303d50a03070
   subpackages:
-  - pocketsphinx
   - sphinx
+  - pocketsphinx
 - name: github.com/xlab/portaudio-go
   version: 1d1526abf2efb0c6c8fd08928aa021378b017bc8
   subpackages:
   - portaudio
 - name: golang.org/x/net
-  version: 5d997795f7bb1d2de5edc1f5d64af2562401c82d
+  version: 40d3034e575b6eafbca34e64224da61de35ae04c
   subpackages:
   - context
   - context/ctxhttp
@@ -36,22 +34,24 @@ imports:
   - jws
   - jwt
 - name: google.golang.org/api
-  version: 0e63b4e123c8b6a2c065594aca23685d6e75fe9f
+  version: 6bc9e77383320b75dcd6810569b6d54b2e84019d
   subpackages:
   - calendar/v3
   - gensupport
   - googleapi
   - googleapi/internal/uritemplates
 - name: google.golang.org/appengine
-  version: 5ed29b64e503dca0c5c4bc8866e2dab94649e86a
+  version: c7b8227c83007befd67b324a64c969ebc1d7475d
   subpackages:
+  - urlfetch
   - internal
+  - internal/urlfetch
   - internal/app_identity
+  - internal/modules
   - internal/base
   - internal/datastore
   - internal/log
-  - internal/modules
   - internal/remote_api
-  - internal/urlfetch
-  - urlfetch
+- name: googlemaps.github.io/maps
+  version: e366342489b05393aae6fc199782c43abc5b37d1
 testImports: []
