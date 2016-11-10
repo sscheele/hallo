@@ -1,12 +1,18 @@
-hash: 3daaf81b027b12a57aae1a46c607773f9f2d47ac73969614d8713555db914ec7
-updated: 2016-11-08T22:25:55.660520183-05:00
 imports:
 - name: github.com/nsf/termbox-go
   version: b6acae516ace002cb8105a89024544a1480655a5
 - name: github.com/xlab/pocketsphinx-go
-  version: a273c769ca7dc827ca5ad839bbb9303d50a03070
+  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
+- name: golang.org/x/net
+  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
+  subpackages:
+  - context
+  - context/ctxhttp
 - name: google.golang.org/api
-  version: 0e63b4e123c8b6a2c065594aca23685d6e75fe9f
+  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
   subpackages:
   - calendar/v3
+  - gensupport
+  - googleapi
+  - googleapi/internal/uritemplates
 testImports: []

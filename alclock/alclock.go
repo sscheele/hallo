@@ -9,7 +9,6 @@ import (
 )
 
 const numDataRows = 4
-
 const banner = ` |_| _ | | _
  | |(_|| |(_)`
 
@@ -90,15 +89,27 @@ func main() {
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		return
 	}
-
-	/*
-		go func() {
-			t := time.Now()
-			fmt.Fprintf(v, "%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second())
-		}()
-	*/
+	go func() {
+		for {
+			timer(g)
+			time.Sleep(1 * time.Second)
+		}
+	}()
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
+}
+
+func timer(g *gocui.Gui) {
+	g.Execute(func(g *gocui.Gui) error {
+		t := time.Now()
+		v, err := g.View("time")
+		if err != nil {
+			return err
+		}
+		v.Clear()
+		fmt.Fprintf(v, "%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second())
+		return nil
+	})
 }
