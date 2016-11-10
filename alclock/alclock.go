@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/jroimartin/gocui"
@@ -97,7 +96,8 @@ func main() {
 	}()
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
-		log.Panicln(err)
+		fmt.Println(err)
+		return
 	}
 }
 
