@@ -23,7 +23,7 @@ type alarm struct {
 }
 
 var (
-	//alarms       []Alarm
+	alarmList    []alarm
 	dataFieldMut sync.Mutex
 	inReader     *bufio.Reader
 	inputChan    chan string
@@ -101,16 +101,6 @@ func getUserInput(g *gocui.Gui, v *gocui.View) error {
 		return nil //user just pressed enter for whatever reason, ignore it
 	}
 	s = s[:len(s)-1] //shave off newline
-	/*
-		mainGUI.Execute(func(g *gocui.Gui) error {
-				v, err := g.View("input")
-				if err != nil {
-					return err
-				}
-				v.Clear()
-				return nil
-			})
-	*/
 
 	if inputChan != nil {
 		inputChan <- s
@@ -158,11 +148,9 @@ func main() {
 		for {
 			c := getCalendarUpdate()
 			writeData(c)
-			time.Sleep(30 * time.Minute) //TODO: Change this value for real purposes
+			time.Sleep(15 * time.Minute) //TODO: Change this value for real purposes
 		}
 	}()
-
-	//go getUserInput()
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		fmt.Println(err)

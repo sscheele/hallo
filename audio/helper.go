@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"syscall"
 
 	"github.com/gordonklaus/portaudio"
 )
@@ -59,18 +60,17 @@ func PlayFile(fileName string) error {
 
 	//redirect portaudio's annoying garbage to null
 	tempErr := os.Stderr
-	tempOut := os.Stdout
 	nullPath := "/dev/null"
 	if runtime.GOOS == "windows" {
 		nullPath = "nul" //windows is, apparently, magic
 	}
-	nullFile, _ := os.Open(nullPath)
-	os.Stdout = nullFile
-	os.Stderr = nullFile
+	nullF, err := os.Open(nullPath)
+	if err != nil {
+		return err
+	}
+	redirStdErr(nullF)
 	portaudio.Initialize()
-	os.Stderr = tempErr
-	os.Stdout = tempOut
-
+	redirStdErr(tempErr)
 	//assume 44100 sample rate, mono, 32 bit
 	defer portaudio.Terminate()
 	out := make([]int32, 8192)
@@ -121,6 +121,13 @@ func readChunk(r readerAtSeeker) (id ID, data *io.SectionReader, err error) {
 	data = io.NewSectionReader(r, off, int64(n))
 	_, err = r.Seek(int64(n), 1)
 	return
+}
+
+func redirStdErr(f *os.File) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	return syscall.Dup2(int(f.Fd()), int(os.Stderr.Fd()))
 }
 
 type readerAtSeeker interface {
