@@ -27,7 +27,6 @@ type Event struct {
 
 //EventTime contains the time of an event
 //In the case of an  all-day event, hour, minute, and second will be empty strings
-//An asterisk should match everything
 //Days and months should always be two digits (ie, March is 03)
 type EventTime struct {
 	Day      string
