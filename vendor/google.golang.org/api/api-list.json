@@ -833,8 +833,6 @@
     "x32": "https://www.google.com/images/icons/product/doubleclick-32.gif"
    },
    "documentationLink": "https://developers.google.com/doubleclick-advertisers/",
-<<<<<<< HEAD
-=======
    "preferred": false
   },
   {
@@ -851,7 +849,6 @@
     "x32": "https://www.google.com/images/icons/product/doubleclick-32.gif"
    },
    "documentationLink": "https://developers.google.com/doubleclick-advertisers/",
->>>>>>> 4906f29844cf119d116aa51fe8ed2598fbf8168e
    "preferred": true
   },
   {
@@ -1330,11 +1327,7 @@
    "name": "dataproc",
    "version": "v1alpha1",
    "title": "Google Cloud Dataproc API",
-<<<<<<< HEAD
-   "description": "Manages Hadoop-based clusters and jobs on Google Cloud Platform.",
-=======
    "description": "An API for managing Hadoop-based clusters and jobs on Google Cloud Platform.",
->>>>>>> 4906f29844cf119d116aa51fe8ed2598fbf8168e
    "discoveryRestUrl": "https://www.googleapis.com/discovery/v1/apis/dataproc/v1alpha1/rest",
    "icons": {
     "x16": "http://www.google.com/images/icons/product/search-16.gif",
@@ -1349,11 +1342,7 @@
    "name": "dataproc",
    "version": "v1",
    "title": "Google Cloud Dataproc API",
-<<<<<<< HEAD
-   "description": "Manages Hadoop-based clusters and jobs on Google Cloud Platform.",
-=======
    "description": "An API for managing Hadoop-based clusters and jobs on Google Cloud Platform.",
->>>>>>> 4906f29844cf119d116aa51fe8ed2598fbf8168e
    "discoveryRestUrl": "https://www.googleapis.com/discovery/v1/apis/dataproc/v1/rest",
    "icons": {
     "x16": "http://www.google.com/images/icons/product/search-16.gif",
@@ -1368,11 +1357,7 @@
    "name": "dataproc",
    "version": "v1beta1",
    "title": "Google Cloud Dataproc API",
-<<<<<<< HEAD
-   "description": "Manages Hadoop-based clusters and jobs on Google Cloud Platform.",
-=======
    "description": "An API for managing Hadoop-based clusters and jobs on Google Cloud Platform.",
->>>>>>> 4906f29844cf119d116aa51fe8ed2598fbf8168e
    "discoveryRestUrl": "https://www.googleapis.com/discovery/v1/apis/dataproc/v1beta1/rest",
    "icons": {
     "x16": "http://www.google.com/images/icons/product/search-16.gif",
@@ -1685,8 +1670,6 @@
   },
   {
    "kind": "discovery#directoryItem",
-<<<<<<< HEAD
-=======
    "id": "manufacturers:v1",
    "name": "manufacturers",
    "version": "v1",
@@ -1702,7 +1685,6 @@
   },
   {
    "kind": "discovery#directoryItem",
->>>>>>> 4906f29844cf119d116aa51fe8ed2598fbf8168e
    "id": "mirror:v1",
    "name": "mirror",
    "version": "v1",
@@ -2149,8 +2131,6 @@
   },
   {
    "kind": "discovery#directoryItem",
-<<<<<<< HEAD
-=======
    "id": "slides:v1",
    "name": "slides",
    "version": "v1",
@@ -2166,7 +2146,6 @@
   },
   {
    "kind": "discovery#directoryItem",
->>>>>>> 4906f29844cf119d116aa51fe8ed2598fbf8168e
    "id": "spectrum:v1explorer",
    "name": "spectrum",
    "version": "v1explorer",

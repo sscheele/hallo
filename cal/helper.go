@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -18,16 +19,92 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
+//Event contains a description and time for an event
+type Event struct {
+	Summary  string
+	DateTime EventTime
+}
+
+//EventTime contains the time of an event
+//In the case of an  all-day event, hour, minute, and second will be empty strings
+//An asterisk should match everything
+//Days and months should always be two digits (ie, March is 03)
+type EventTime struct {
+	Day      string
+	Month    string
+	Year     string
+	Hour     string
+	Minute   string
+	Second   string
+	IsAllDay bool
+}
+
+//NewEventTime returns an EventTime with default values
+func NewEventTime() EventTime {
+	return EventTime{
+		Day:      "",
+		Month:    "",
+		Year:     "",
+		Hour:     "",
+		Minute:   "",
+		Second:   "",
+		IsAllDay: false,
+	}
+}
+
+func check(e error, s string) {
+	if e != nil {
+		fmt.Printf("Error working on %s: %v", s, e)
+	}
+}
+
+//GetEvents returns the next ten calendar events
+func GetEvents(f func(string) string) []Event {
+	var retVal []Event
+
+	srv, err := GetCalendar(f)
+	check(err, "getting calendar")
+
+	events, err := RetrieveEvents(srv, 10)
+	check(err, "retrieving events")
+
+	if len(events.Items) == 0 {
+		return retVal
+	}
+
+	for _, i := range events.Items {
+		var when string
+		t := NewEventTime()
+		// If the DateTime is an empty string the Event is an all-day Event.
+		// So only Date is available.
+		if i.Start.DateTime != "" {
+			when = i.Start.DateTime
+			//Dates are formatted according to RFC3339
+			when = when[:19]
+			fmt.Fscanf(strings.NewReader(when), "%s-%s-%sT%s:%s:%s", &t.Year, &t.Month, &t.Day, &t.Hour, &t.Minute, &t.Second)
+			t.IsAllDay = false
+			//fmt.Printf("Hour: %d, Minute: %d, Second: %d ", hour, minute, second)
+		} else {
+			when = i.Start.Date
+			fmt.Fscanf(strings.NewReader(when), "%s-%s-%s", &t.Year, &t.Month, &t.Day)
+			t.IsAllDay = true
+		}
+		retVal = append(retVal, Event{Summary: i.Summary, DateTime: t})
+	}
+
+	return retVal
+}
+
 // getClient uses a Context and Config to retrieve a Token
 // then generate a Client. It returns the generated Client.
-func getClient(ctx context.Context, config *oauth2.Config) *http.Client {
+func getClient(ctx context.Context, config *oauth2.Config, f func(string) string) *http.Client {
 	cacheFile, err := tokenCacheFile()
 	if err != nil {
 		log.Fatalf("Unable to get path to cached credential file. %v", err)
 	}
 	tok, err := tokenFromFile(cacheFile)
 	if err != nil {
-		tok = getTokenFromWeb(config)
+		tok = getTokenFromWeb(config, f)
 		saveToken(cacheFile, tok)
 	}
 	return config.Client(ctx, tok)
@@ -35,15 +112,11 @@ func getClient(ctx context.Context, config *oauth2.Config) *http.Client {
 
 // getTokenFromWeb uses Config to request a Token.
 // It returns the retrieved Token.
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
+func getTokenFromWeb(config *oauth2.Config, f func(string) string) *oauth2.Token {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
 
-	var code string
-	if _, err := fmt.Scan(&code); err != nil {
-		log.Fatalf("Unable to read authorization code %v", err)
-	}
+	code := f(fmt.Sprintf("Go to the following link in your browser then type the "+
+		"authorization code: \n%v\n", authURL))
 
 	tok, err := config.Exchange(oauth2.NoContext, code)
 	if err != nil {
@@ -91,10 +164,10 @@ func saveToken(file string, token *oauth2.Token) {
 }
 
 //GetCalendar authenticates to the google api and returns a calendar service object
-func GetCalendar() (*calendar.Service, error) {
+func GetCalendar(f func(string) string) (*calendar.Service, error) {
 	ctx := context.Background()
 
-	b, err := ioutil.ReadFile("client_secret.json")
+	b, err := ioutil.ReadFile("/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/cal/client_secret.json")
 	if err != nil {
 		//log.Fatalf("Unable to read client secret file: %v", err)
 		return nil, err
@@ -107,14 +180,14 @@ func GetCalendar() (*calendar.Service, error) {
 		//log.Fatalf("Unable to parse client secret file to config: %v", err)
 		return nil, err
 	}
-	client := getClient(ctx, config)
+	client := getClient(ctx, config, f)
 
 	srv, err := calendar.New(client)
 
 	return srv, err
 }
 
-//RetrieveElements accepts a calendar service object and returns a list of calendar events (up to MaxEvents long)
+//RetrieveEvents accepts a calendar service object and returns a list of calendar events (up to MaxEvents long)
 func RetrieveEvents(srv *calendar.Service, maxEvents int64) (list *calendar.Events, err error) {
 	t := time.Now().Format(time.RFC3339)
 	return srv.Events.List("primary").ShowDeleted(false).SingleEvents(true).TimeMin(t).MaxResults(maxEvents).OrderBy("startTime").Do()

@@ -1,15 +1,19 @@
+hash: 3daaf81b027b12a57aae1a46c607773f9f2d47ac73969614d8713555db914ec7
+updated: 2016-11-10T14:29:03.349940549-05:00
 imports:
+- name: github.com/mattn/go-runewidth
+  version: 737072b4e32b7a5018b4a7125da8d12de90e8045
 - name: github.com/nsf/termbox-go
-  version: b6acae516ace002cb8105a89024544a1480655a5
+  version: 6dfc4377192c0b74b3ee2de876a231d4578eceba
 - name: github.com/xlab/pocketsphinx-go
-  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
+  version: 6dfc4377192c0b74b3ee2de876a231d4578eceba
 - name: golang.org/x/net
-  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
+  version: 6dfc4377192c0b74b3ee2de876a231d4578eceba
   subpackages:
   - context
   - context/ctxhttp
 - name: google.golang.org/api
-  version: 943418ffb71c33d03cb2954fa3b761ed4265cf49
+  version: 6dfc4377192c0b74b3ee2de876a231d4578eceba
   subpackages:
   - calendar/v3
   - gensupport
