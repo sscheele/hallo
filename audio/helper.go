@@ -12,9 +12,11 @@ import (
 	"github.com/gordonklaus/portaudio"
 )
 
+//ErrInterrupt will be returned when we receive the interrupt signal
+var ErrInterrupt = errors.New("Caught interrupt")
+
 //PlayFile is sent a path and plays an audio file
-func PlayFile(fileName string) error {
-	sig := make(chan os.Signal, 1)
+func PlayFile(fileName string, sig chan os.Signal) error {
 	signal.Notify(sig, os.Interrupt, os.Kill)
 
 	f, err := os.Open(fileName)
@@ -100,7 +102,7 @@ func PlayFile(fileName string) error {
 		}
 		select {
 		case <-sig:
-			return nil
+			return ErrInterrupt
 		default:
 		}
 	}
