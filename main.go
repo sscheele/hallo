@@ -8,6 +8,7 @@ import (
 
 	"github.com/jroimartin/gocui"
 	"github.com/sscheele/hallo/alclock"
+	"github.com/sscheele/hallo/audio"
 	"github.com/sscheele/hallo/cal"
 )
 
@@ -136,29 +137,27 @@ func main() {
 		for {
 			t := time.Now()
 			updateTime(t)
-			/*
-				go func() {
-					sig := make(chan os.Signal, 1)
-					if err := g.SetKeybinding("",
-						gocui.KeyEnter,
+			go func() {
+				if len(alarmList) > 0 && t.Equal(alarmList[0].NextGoesOff) {
+					sig := make(chan byte, 1)
+					if err := g.SetKeybinding("input",
+						gocui.KeySpace,
 						gocui.ModNone,
 						func(g *gocui.Gui, v *gocui.View) error {
-							sig <- os.Interrupt
+							sig <- 1
 							return nil
 						}); err != nil {
 						return
-						}
-
-					if hasAlarm(t) {
-						for {
-							err := audio.PlayFile("/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/audio/bell.aiff", sig)
-							if err == audio.ErrInterrupt {
-								break
-							}
+					}
+					for {
+						err := audio.PlayFile("/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/audio/bell.aiff", sig)
+						if err == audio.ErrInterrupt {
+							break
 						}
 					}
-				}()
-			*/
+					g.DeleteKeybinding("input", gocui.KeySpace, gocui.ModNone)
+				}
+			}()
 			time.Sleep(1 * time.Second)
 		}
 	}()
