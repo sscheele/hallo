@@ -22,40 +22,61 @@ type alarm struct {
 	DateTime map[string]string
 	//DayOfWeek contains a key for each day of the week
 	DayOfWeek map[time.Weekday]struct{}
+	//NextGoesOff contains the time at which the alarm will next go off
+	NextGoesOff time.Time
 }
 
-func (a *alarm) matchesTime(t time.Time) bool {
-	//day match is least probable
-	_, isWeekdayMatch := a.DayOfWeek[t.Weekday()]
-	if !(isWeekdayMatch || a.DateTime["day"] == "*" || fmt.Sprintf("%02d", t.Day()) == a.DateTime["day"]) {
-		return false
+//returns a time giving the next instant the alarm will go off
+//time instants can then be compared with .Before(), .Equal(), and .After()
+func (a *alarm) nextRing() time.Time {
+	n := time.Now()
+	var yr int
+	if a["year"] == "*" {
+		yr = n.Year()
+	} else {
+		fmt.Fscanf(a["year"], "%d", &yr)
 	}
 
-	//minute match is next least probable
-	if !(a.DateTime["minute"] == "*" || fmt.Sprintf("%02d", t.Minute()) == a.DateTime["minute"]) {
-		return false
+	var mo time.Month
+	if a["month"] == "*" {
+		mo = n.Month()
+	} else {
+		var tmp int
+		fmt.Fscanf(a["month"], "%d", &tmp)
+		mo = time.Month(tmp) //months are 1+iota, so this should work
 	}
 
-	//month match
-	if !(a.DateTime["month"] == "*" || fmt.Sprintf("%02d", t.Month()) == a.DateTime["month"]) {
-		return false
+	var da int
+	_, isWeekday := a.DayOfWeek[n.Weekday()]
+	if a["day"] == "*" || isWeekday {
+		da := n.Day()
+	} else {
+		fmt.Fscanf(a["day"], "%d", &da)
 	}
 
-	//year match
-	if !(a.DateTime["year"] == "*" || a.DateTime["year"] == fmt.Sprintf("%d", t.Year())) {
-		return false
+	var hr int
+	if a["hour"] == "*" {
+		hr = n.Hour()
+	} else {
+		fmt.Fscanf(a["hour"], "%d", &hr)
 	}
 
-	//second match
-	if !(a.DateTime["second"] == "*" || a.DateTime["second"] == fmt.Sprintf("%02d", t.Second())) {
-		return false
+	var mi int
+	if a["minute"] == "*" { //probably a bad idea
+		mi = n.Minute()
+	} else {
+		fmt.Fscanf(a["minute"], "%d", &mi)
 	}
 
-	//hour match
-	if !(a.DateTime["hour"] == "*" || a.DateTime["hour"] == fmt.Sprintf("%02d", t.Hour())) {
-		return false
+	var se int
+	if a["second"] == "*" { //please do not do this
+		//why would you do this
+		se = n.Second()
+	} else {
+		fmt.Fscanf(a["second"], "%d", &se)
 	}
-	return true
+
+	return time.Date(yr, mo, da, hr, mi, se, 0, time.Local)
 }
 
 var (
