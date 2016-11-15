@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"os/signal"
 	"runtime"
 	"syscall"
 
@@ -16,9 +15,7 @@ import (
 var ErrInterrupt = errors.New("Caught interrupt")
 
 //PlayFile is sent a path and plays an audio file
-func PlayFile(fileName string, sig chan os.Signal) error {
-	signal.Notify(sig, os.Interrupt, os.Kill)
-
+func PlayFile(fileName string, sig chan byte) error {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return err

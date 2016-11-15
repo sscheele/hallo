@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -104,10 +105,57 @@ func getUserInput(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	}
 
-	writeData([]string{s})
+	handleInput(s)
+	//writeData([]string{s})
 	//^ HANDLE USER INPUT INSTEAD
 
 	return nil
+}
+
+func handleInput(s string) {
+	args := strings.Split(s, " ")
+	switch args[0] {
+	case "add-alarm":
+		//SYNTAX: add-alarm yyyy-mm-ddThh:MM:ss weekday1 weekday2 weekday3
+		if len(args) < 2 {
+			writeData([]string{"add-alarm: not enough arguments"})
+			return
+		}
+		args = append(args, "") //avoid index out of bounds while calling NewAlarm
+		a, err := alclock.NewAlarm(args[1], args[2:])
+		if err != nil {
+			if err == alclock.ErrDateString {
+				writeData([]string{"add-alarm: date string improperly formatted"})
+				return
+			}
+			writeData([]string{"add-alarm: unknown error"})
+		}
+		addAlarm(a)
+		//DEBUG
+		writeData([]string{fmt.Sprintf("Length of alarmList is: %d", len(alarmList))})
+		if len(alarmList) > 0 {
+			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
+		}
+	}
+}
+
+func addAlarm(a alclock.Alarm) {
+	//keep alarmList sorted so that alarmList[0] is always the next to go off
+	if len(alarmList) == 0 {
+		alarmList = append(alarmList, a)
+		return
+	}
+	i := 0
+	for i < len(alarmList) && a.NextGoesOff.After(alarmList[i].NextGoesOff) {
+		i++ //could do this in one line, but it's more clear this way
+	}
+	if i == len(alarmList)-1 { //avoid needlessly copying
+		alarmList = append(alarmList, a)
+		return
+	}
+	alarmList = append(alarmList, alclock.EmptyAlarm())
+	copy(alarmList[i+1:], alarmList[i:]) //golang's copy is dst, src
+	alarmList[i] = a
 }
 
 func main() {
@@ -138,7 +186,9 @@ func main() {
 			t := time.Now()
 			updateTime(t)
 			go func() {
-				if len(alarmList) > 0 && t.Equal(alarmList[0].NextGoesOff) {
+				//writeData([]string{fmt.Sprintf("Current Unix time: %d", t.Unix())})
+				if len(alarmList) > 0 && t.Unix() == alarmList[0].NextGoesOff.Unix() {
+					writeData([]string{"ALARM!"})
 					sig := make(chan byte, 1)
 					if err := g.SetKeybinding("input",
 						gocui.KeySpace,

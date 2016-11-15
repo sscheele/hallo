@@ -1,10 +1,14 @@
 package alclock
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
+
+//ErrDateString will be returned when trying to parse an invalid date string
+var ErrDateString = errors.New("Error: date string invalid")
 
 //Alarm represents an alarm
 type Alarm struct {
@@ -17,19 +21,35 @@ type Alarm struct {
 	NextGoesOff time.Time
 }
 
+//EmptyAlarm returns an empty alarm which is about to go off
+//primarily useful as a junk value
+func EmptyAlarm() Alarm {
+	return Alarm{
+		DateTime:    nil,
+		DayOfWeek:   nil,
+		NextGoesOff: time.Now(),
+	}
+}
+
 //NewAlarm gets a date string in a format similar to RFC3339: yyyy-mm-ddThh:MM:ss and an array of strings representing days of the week
 //It returns an Alarm object based on these inputs
-func NewAlarm(dateString string, weekdays []string) Alarm {
-	var (
-		wd map[time.Weekday]struct{}
-		yr string
-		mo string
-		da string
-		ho string
-		mi string
-		se string
-	)
-	fmt.Fscanf(strings.NewReader(dateString), "%s-%s-%sT%s:%s:%s", &yr, &mo, &da, &ho, &mi, &se)
+func NewAlarm(dateString string, weekdays []string) (retVal Alarm, err error) {
+	retVal = EmptyAlarm()
+	var wd map[time.Weekday]struct{}
+
+	dt := strings.FieldsFunc(dateString, func(r rune) bool {
+		switch r {
+		case '-', 'T', ':':
+			return true
+		}
+		return false
+	})
+
+	if len(dt) != 6 {
+		err = ErrDateString
+		return
+	}
+
 	for _, item := range weekdays {
 		switch {
 		case strings.EqualFold(item, "monday"):
@@ -48,12 +68,12 @@ func NewAlarm(dateString string, weekdays []string) Alarm {
 			wd[time.Sunday] = struct{}{}
 		}
 	}
-	retVal := Alarm{
-		DateTime:  map[string]string{"year": yr, "month": mo, "day": da, "hour": ho, "minute": mi, "second": se},
+	retVal = Alarm{
+		DateTime:  map[string]string{"year": dt[0], "month": dt[1], "day": dt[2], "hour": dt[3], "minute": dt[4], "second": dt[5]},
 		DayOfWeek: wd,
 	}
 	retVal.NextGoesOff = NextRing(retVal)
-	return retVal
+	return
 }
 
 //NextRing returns a time giving the next instant the alarm will go off
