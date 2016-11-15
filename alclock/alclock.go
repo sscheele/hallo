@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/sscheele/hallo/gmaps"
 )
 
 //ErrDateString will be returned when trying to parse an invalid date string
@@ -19,6 +21,8 @@ type Alarm struct {
 	DayOfWeek map[time.Weekday]struct{}
 	//NextGoesOff contains the time at which the alarm will next go off
 	NextGoesOff time.Time
+	//TripInfo contains information about whether the alarm is an "in time for" alarm
+	TripInfo map[string]string
 }
 
 //EmptyAlarm returns an empty alarm which is about to go off
@@ -28,7 +32,24 @@ func EmptyAlarm() Alarm {
 		DateTime:    nil,
 		DayOfWeek:   nil,
 		NextGoesOff: time.Now(),
+		TripInfo:    nil,
 	}
+}
+
+//NewArriveBy returns an alarm that changes as google changes its estimate for arrival time
+func NewArriveBy(arriveAt string, origin string, dest string, avoid string, weekdays []string) (retVal Alarm, err error) {
+	retVal, err = NewAlarm(arriveAt, weekdays)
+	if err != nil {
+		return
+	}
+	retVal.TripInfo = map[string]string{
+		"origin":       origin,
+		"destination":  dest,
+		"arrival_time": fmt.Sprintf("%d", retVal.NextGoesOff.Unix()),
+		"avoid":        avoid,
+	}
+	retVal.NextGoesOff = time.Unix(retVal.NextGoesOff.Unix() - int64(gmaps.GetTimeToLocation(retVal.TripInfo)))
+	return
 }
 
 //NewAlarm gets a date string in a format similar to RFC3339: yyyy-mm-ddThh:MM:ss and an array of strings representing days of the week
@@ -71,6 +92,7 @@ func NewAlarm(dateString string, weekdays []string) (retVal Alarm, err error) {
 	retVal = Alarm{
 		DateTime:  map[string]string{"year": dt[0], "month": dt[1], "day": dt[2], "hour": dt[3], "minute": dt[4], "second": dt[5]},
 		DayOfWeek: wd,
+		TripInfo:  nil,
 	}
 	retVal.NextGoesOff = NextRing(retVal)
 	return

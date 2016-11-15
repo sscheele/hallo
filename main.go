@@ -136,6 +136,8 @@ func handleInput(s string) {
 		if len(alarmList) > 0 {
 			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
 		}
+	case "add-arrive-by":
+		//SYNTAX: add-arrive-by yyyy-mm-ddThh:MM:ss origin destination avoid 
 	}
 }
 
@@ -220,6 +222,13 @@ func main() {
 			time.Sleep(15 * time.Minute) //TODO: Change this value for real purposes
 		}
 	}()
+
+	//gmaps
+	go func() {
+		for {
+			
+		}
+	}
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		fmt.Println(err)

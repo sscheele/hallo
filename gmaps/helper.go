@@ -29,16 +29,9 @@ func check(err error, description string) {
 
 //GetTimeToLocation is given an origin, destination, target arrival time, and, optionally, points to avoid
 //it returns the estimated time, in seconds
-func GetTimeToLocation(origin, destination, arrival, avoid string) int {
-	if avoid == "" {
-		avoid = "tolls|ferries"
-	}
-	var params = map[string]string{
-		"key":          "",
-		"origin":       origin,      //place of origin
-		"destination":  destination, //destination coordinates/address
-		"arrival_time": arrival,     //arrival time (seconds since epoch)
-		"avoid":        avoid,       //valid values are tolls, highways, ferries, | separated
+func GetTimeToLocation(params map[string]string) int {
+	if params["avoid"] == "" {
+		params["avoid"] = "tolls|ferries"
 	}
 
 	respBody := getDirs(params)
