@@ -7,5 +7,11 @@ import (
 
 func TestDepart(t *testing.T) {
 	InitAPIKey()
-	fmt.Println(GetTimeToLocation("Fairfax, VA", "Washington, DC", "1479406158", ""))
+	var params = map[string]string{
+		"origin":       "Fairfax, VA",
+		"destination":  "Washington, DC",
+		"arrival_time": "1479406158",
+		"avoid":        "",
+	}
+	fmt.Println(GetTimeToLocation(params))
 }
