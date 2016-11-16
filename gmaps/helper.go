@@ -40,22 +40,18 @@ func GetTimeToLocation(params map[string]string) int {
 //returns the trip length in seconds
 func getTripLen(respBody string) int {
 	//first, get the part that describes the whole trip
-	i := strings.Index(respBody, `         "legs" : [`)
-	respBody = respBody[i:]
-	i = strings.Index(respBody, `               "steps" : [`)
+	i := strings.Index(respBody, `"steps" : [`)
 	respBody = respBody[:i]
-
-	//next, the part that describes only the duration
-	i = strings.Index(respBody, `"duration" : {`)
+	i = strings.Index(respBody, `"legs" : [`)
 	respBody = respBody[i:]
-	i = strings.Index(respBody, `"value" :`)
-	respBody = respBody[i:]
-	i = strings.Index(respBody, "\n")
-	respBody = respBody[:i]
-	respBody = strings.Split(respBody, " : ")[1]
 
-	fmt.Fscanf(strings.NewReader(respBody), "%d", &i)
-	return i
+	var tmp string
+	var dur int
+
+	fmt.Fscanf(strings.NewReader(respBody), `"duration" : {%s}`, &tmp)
+	fmt.Fscanf(strings.NewReader(tmp), `"value" : %d`, &dur)
+
+	return dur
 }
 
 func getDirs(params map[string]string) string {

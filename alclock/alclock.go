@@ -29,7 +29,11 @@ type Alarm struct {
 func (a *Alarm) UpdateArriveBy() {
 	var t int64
 	fmt.Fscanf(strings.NewReader(a.TripInfo["arrival_time"]), "%d", &t)
-	a.NextGoesOff = time.Unix(t-int64(gmaps.GetTimeToLocation(a.TripInfo)), 0)
+	dur := gmaps.GetTimeToLocation(a.TripInfo)
+	if dur == 0 {
+		return
+	}
+	a.NextGoesOff = time.Unix(t-int64(dur), 0)
 }
 
 //EmptyAlarm returns an empty alarm which is about to go off
