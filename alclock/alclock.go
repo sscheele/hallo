@@ -25,6 +25,13 @@ type Alarm struct {
 	TripInfo map[string]string
 }
 
+//UpdateArriveBy updates the NextGoesOff atribute of an alarm to make sure it's in time for to arrive somewhere
+func (a *Alarm) UpdateArriveBy() {
+	var t int64
+	fmt.Fscanf(strings.NewReader(a.TripInfo["arrival_time"]), "%d", &t)
+	a.NextGoesOff = time.Unix(t-int64(gmaps.GetTimeToLocation(a.TripInfo)), 0)
+}
+
 //EmptyAlarm returns an empty alarm which is about to go off
 //primarily useful as a junk value
 func EmptyAlarm() Alarm {
@@ -48,7 +55,7 @@ func NewArriveBy(arriveAt string, origin string, dest string, avoid string, week
 		"arrival_time": fmt.Sprintf("%d", retVal.NextGoesOff.Unix()),
 		"avoid":        avoid,
 	}
-	retVal.NextGoesOff = time.Unix(retVal.NextGoesOff.Unix() - int64(gmaps.GetTimeToLocation(retVal.TripInfo)))
+	retVal.NextGoesOff = time.Unix(retVal.NextGoesOff.Unix()-int64(gmaps.GetTimeToLocation(retVal.TripInfo)), 0)
 	return
 }
 

@@ -51,24 +51,20 @@ func NewEventTime() EventTime {
 	}
 }
 
-func check(e error, s string) {
-	if e != nil {
-		fmt.Printf("Error working on %s: %v", s, e)
-	}
-}
-
 //GetEvents returns the next ten calendar events
-func GetEvents(f func(string) string) []Event {
-	var retVal []Event
-
+func GetEvents(f func(string) string) (retVal []Event) {
 	srv, err := GetCalendar(f)
-	check(err, "getting calendar")
+	if err != nil {
+		return
+	}
 
 	events, err := RetrieveEvents(srv, 10)
-	check(err, "retrieving events")
+	if err != nil {
+		return
+	}
 
 	if len(events.Items) == 0 {
-		return retVal
+		return
 	}
 
 	for _, i := range events.Items {

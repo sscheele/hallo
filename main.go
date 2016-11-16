@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"strings"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"github.com/sscheele/hallo/alclock"
 	"github.com/sscheele/hallo/audio"
 	"github.com/sscheele/hallo/cal"
+	"github.com/sscheele/hallo/parseCmd"
 )
 
 const numDataRows = 4
@@ -18,12 +20,28 @@ const banner = ` |_| _ | | _
  | |(_|| |(_)`
 
 var (
-	alarmList    []alclock.Alarm
-	dataFieldMut sync.Mutex
-	inReader     *bufio.Reader
-	inputChan    chan string
-	mainGUI      *gocui.Gui
+	alarmList      []alclock.Alarm
+	nextAlarm      alclock.Alarm
+	nextAlarmIndex int
+	dataFieldMut   sync.Mutex
+	inReader       *bufio.Reader
+	inputChan      chan string
+	mainGUI        *gocui.Gui
 )
+
+func updateNextAlarm() {
+	if !(len(alarmList) > 0) {
+		return
+	}
+	tempMin := alarmList[0]
+	for i, al := range alarmList {
+		if al.NextGoesOff.Before(tempMin.NextGoesOff) {
+			tempMin = al
+			nextAlarmIndex = i
+		}
+	}
+	nextAlarm = tempMin
+}
 
 func setCurrentViewOnTop(g *gocui.Gui, name string) (*gocui.View, error) {
 	if _, err := g.SetCurrentView(name); err != nil {
@@ -116,13 +134,16 @@ func handleInput(s string) {
 	args := strings.Split(s, " ")
 	switch args[0] {
 	case "add-alarm":
-		//SYNTAX: add-alarm yyyy-mm-ddThh:MM:ss weekday1 weekday2 weekday3
-		if len(args) < 2 {
-			writeData([]string{"add-alarm: not enough arguments"})
+		alarmVars, err := parseCmd.ParseAlarm(s)
+		if err != nil {
+			if err == flag.ErrHelp {
+				writeData([]string{"Required arguments: 'date': date to go off in form yyyy-mm-ddThh:MM:ss, with asterisks (*) meaning 'every'. Optional arguments: 'weekdays': space separated list of weekdays the alarm should go off on."})
+				return
+			}
+			writeData([]string{"Error parsing arguments"})
 			return
 		}
-		args = append(args, "") //avoid index out of bounds while calling NewAlarm
-		a, err := alclock.NewAlarm(args[1], args[2:])
+		a, err := alclock.NewAlarm(alarmVars.DateString, strings.Split(alarmVars.Weekdays, " "))
 		if err != nil {
 			if err == alclock.ErrDateString {
 				writeData([]string{"add-alarm: date string improperly formatted"})
@@ -130,34 +151,45 @@ func handleInput(s string) {
 			}
 			writeData([]string{"add-alarm: unknown error"})
 		}
-		addAlarm(a)
+		alarmList = append(alarmList, a)
+		updateNextAlarm()
 		//DEBUG
 		writeData([]string{fmt.Sprintf("Length of alarmList is: %d", len(alarmList))})
 		if len(alarmList) > 0 {
 			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
 		}
 	case "add-arrive-by":
-		//SYNTAX: add-arrive-by yyyy-mm-ddThh:MM:ss origin destination avoid 
-	}
-}
-
-func addAlarm(a alclock.Alarm) {
-	//keep alarmList sorted so that alarmList[0] is always the next to go off
-	if len(alarmList) == 0 {
+		arriveVars, err := parseCmd.ParseArriveBy(s)
+		if err != nil {
+			if err == flag.ErrHelp {
+				writeData([]string{"Required arguments: 'date': date when you want to arrive in form yyyy-mm-ddThh:MM:ss, with asterisks (*) meaning 'every', 'start': starting location, 'end': destination. Optional arguments: 'weekdays': space separated list of weekdays the alarm should go off on, 'avoid': pipe (|) separated list of things to avoid (valid values are 'ferries', 'tolls', and 'highways', default is 'tolls|ferries'."})
+				return
+			}
+			writeData([]string{"Error parsing arguments"})
+			return
+		}
+		a, err := alclock.NewArriveBy(
+			arriveVars.DateString,
+			arriveVars.Origin,
+			arriveVars.Destination,
+			arriveVars.Avoid,
+			strings.Split(arriveVars.Weekdays, " "),
+		)
+		if err != nil {
+			if err == alclock.ErrDateString {
+				writeData([]string{"add-alarm: date string improperly formatted"})
+				return
+			}
+			writeData([]string{"add-alarm: unknown error"})
+		}
 		alarmList = append(alarmList, a)
-		return
+		updateNextAlarm()
+		//DEBUG
+		writeData([]string{fmt.Sprintf("Length of alarmList is: %d", len(alarmList))})
+		if len(alarmList) > 0 {
+			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
+		}
 	}
-	i := 0
-	for i < len(alarmList) && a.NextGoesOff.After(alarmList[i].NextGoesOff) {
-		i++ //could do this in one line, but it's more clear this way
-	}
-	if i == len(alarmList)-1 { //avoid needlessly copying
-		alarmList = append(alarmList, a)
-		return
-	}
-	alarmList = append(alarmList, alclock.EmptyAlarm())
-	copy(alarmList[i+1:], alarmList[i:]) //golang's copy is dst, src
-	alarmList[i] = a
 }
 
 func main() {
@@ -189,7 +221,7 @@ func main() {
 			updateTime(t)
 			go func() {
 				//writeData([]string{fmt.Sprintf("Current Unix time: %d", t.Unix())})
-				if len(alarmList) > 0 && t.Unix() == alarmList[0].NextGoesOff.Unix() {
+				if len(alarmList) > 0 && t.Unix() == nextAlarm.NextGoesOff.Unix() {
 					writeData([]string{"ALARM!"})
 					sig := make(chan byte, 1)
 					if err := g.SetKeybinding("input",
@@ -207,6 +239,12 @@ func main() {
 							break
 						}
 					}
+					newTime := alclock.NextRing(nextAlarm)
+					if newTime.Equal(nextAlarm.NextGoesOff) {
+						//alarm does not repeat, delete it
+						alarmList = append(alarmList[:nextAlarmIndex], alarmList[nextAlarmIndex+1:]...)
+					}
+					updateNextAlarm()
 					g.DeleteKeybinding("input", gocui.KeySpace, gocui.ModNone)
 				}
 			}()
@@ -215,6 +253,7 @@ func main() {
 	}()
 
 	//calendar
+
 	go func() {
 		for {
 			c := getCalendarUpdate()
@@ -224,11 +263,13 @@ func main() {
 	}()
 
 	//gmaps
-	go func() {
-		for {
-			
-		}
-	}
+	/*
+		go func() {
+			for {
+
+			}
+		}()
+	*/
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		fmt.Println(err)

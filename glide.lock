@@ -1,13 +1,13 @@
-hash: cdd13fc5e91a82f85ce2b6dcdc6c4437a35d19a92d7dadd410af4e2e028f9252
-updated: 2016-11-11T22:05:51.930129494-05:00
+hash: d4a0d5415ad8045fdfcd6e1aec0c33e44b3d07effeb05cdc4edc270bbee66dae
+updated: 2016-11-15T21:35:03.916784305-05:00
 imports:
 - name: cloud.google.com/go
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - compute/metadata
   - internal
 - name: github.com/golang/protobuf
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - proto
 - name: github.com/gordonklaus/portaudio
@@ -16,40 +16,42 @@ imports:
   version: 0975ddb2a85e94dfb9fcd0b8672f4a33b960fb1f
 - name: github.com/mattn/go-runewidth
   version: 737072b4e32b7a5018b4a7125da8d12de90e8045
+- name: github.com/mattn/go-shellwords
+  version: f4e566c536cf69158e808ec28ef4182a37fdc981
 - name: github.com/nsf/termbox-go
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
 - name: github.com/xlab/closer
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
 - name: github.com/xlab/pocketsphinx-go
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - sphinx
   - pocketsphinx
 - name: github.com/xlab/portaudio-go
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - portaudio
 - name: golang.org/x/net
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - context
   - context/ctxhttp
 - name: golang.org/x/oauth2
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - google
   - internal
   - jws
   - jwt
 - name: google.golang.org/api
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - calendar/v3
   - gensupport
   - googleapi
   - googleapi/internal/uritemplates
 - name: google.golang.org/appengine
-  version: a6e9c916106eaf19a7aa5610330a2b7f92639908
+  version: 0e8e08a26447b1e832c4626b11ce5abe4424cd56
   subpackages:
   - urlfetch
   - internal

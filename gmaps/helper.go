@@ -12,19 +12,18 @@ import (
 var apiKey string
 
 //InitAPIKey reads in the API key from the default file
-func InitAPIKey() {
+func InitAPIKey() error {
 	f, err := os.Open("api-key.txt")
-	check(err, "opening file")
+	if err != nil {
+		return err
+	}
 	reader := bufio.NewReader(f)
 	apiKey, err = reader.ReadString('\n')
-	check(err, "reading api key from file")
-	apiKey = apiKey[:len(apiKey)-1]
-}
-
-func check(err error, description string) {
 	if err != nil {
-		fmt.Printf("fatal error in %s: %s", description, err)
+		return err
 	}
+	apiKey = apiKey[:len(apiKey)-1]
+	return nil
 }
 
 //GetTimeToLocation is given an origin, destination, target arrival time, and, optionally, points to avoid
@@ -64,14 +63,18 @@ func getDirs(params map[string]string) string {
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://maps.googleapis.com/maps/api/directions/json", nil)
-	check(err, "creating http request")
+	if err != nil {
+		return ""
+	}
 	q := req.URL.Query()
 	for key, value := range params {
 		q.Add(key, value)
 	}
 	req.URL.RawQuery = q.Encode()
-	fmt.Println(req.URL.String())
 	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
 	return string(respBody)
