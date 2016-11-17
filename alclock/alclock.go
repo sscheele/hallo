@@ -54,10 +54,10 @@ func NewArriveBy(arriveAt string, origin string, dest string, avoid string, week
 		return
 	}
 	retVal.TripInfo = map[string]string{
-		"origin":       origin,
-		"destination":  dest,
-		"arrival_time": fmt.Sprintf("%d", retVal.NextGoesOff.Unix()),
-		"avoid":        avoid,
+		"wp.0":     origin,
+		"wp.1":     dest,
+		"dateTime": arriveAt,
+		"avoid":    avoid,
 	}
 	retVal.NextGoesOff = time.Unix(retVal.NextGoesOff.Unix()-int64(gmaps.GetTimeToLocation(retVal.TripInfo)), 0)
 	return
