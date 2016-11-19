@@ -1,4 +1,4 @@
-package gmaps
+package maps
 
 import (
 	"bufio"
@@ -11,19 +11,18 @@ import (
 
 var apiKey string
 
-//InitAPIKey reads in the API key from the default file
-func InitAPIKey() error {
+func init() {
 	f, err := os.Open("api-key.txt")
 	if err != nil {
-		return err
+		return
 	}
 	reader := bufio.NewReader(f)
 	apiKey, err = reader.ReadString('\n')
 	if err != nil {
-		return err
+		return
 	}
 	apiKey = apiKey[:len(apiKey)-1]
-	return nil
+	return
 }
 
 //GetTimeToLocation is given an origin, destination, target arrival time, and, optionally, points to avoid
@@ -48,22 +47,34 @@ func getTripLen(respBody string) (int, int) {
 	noTraffInd += 17 //len(`"travelDuration"`)
 	traffInd += 24   //len(`"travelDurationTraffic"`)
 	var i int
-	for i = noTraffInd; isNumberChar(respBody[i]); i++ {
+	for i = noTraffInd; !isSeparator(respBody[i]); i++ {
 		//do nothing; we only care about i
 	}
 	noTraffStr := respBody[noTraffInd:i]
 	fmt.Fscanf(strings.NewReader(noTraffStr), "%d", &rv2)
-	for i = traffInd; isNumberChar(respBody[i]); i++ {
+	for i = traffInd; !isSeparator(respBody[i]); i++ {
 		//do nothing; we only care about i
 	}
 	traffStr := respBody[traffInd:i]
 	fmt.Fscanf(strings.NewReader(traffStr), "%d", &rv1)
-	return rv1, rv2 //TODO: ACTUALLY DO THIS
+
+	//DEBUG
+	/*
+		dataInd := strings.LastIndex(respBody, `"trafficDataUsed"`)
+		if dataInd == -1 {
+			return rv1, rv2
+		}
+		for i = dataInd + 18; !isSeparator(respBody[i]); i++ {
+			//still only care about i
+		}
+		fmt.Println(respBody[dataInd:i])
+	*/
+	return rv1, rv2
 }
 
-func isNumberChar(r byte) bool {
+func isSeparator(r byte) bool {
 	switch r {
-	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+	case ',', '}', ']', ':', '(', ')', '[', '{':
 		return true
 	}
 	return false
@@ -83,7 +94,7 @@ func getDirs(params map[string]string) string {
 		q.Add(key, value)
 	}
 	req.URL.RawQuery = q.Encode()
-	fmt.Println(req.URL.RawQuery)
+	//fmt.Println(req.URL.RawQuery)
 	resp, err := client.Do(req)
 	if err != nil {
 		return ""
