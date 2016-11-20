@@ -12,7 +12,9 @@ import (
 	"github.com/sscheele/hallo/alclock"
 	"github.com/sscheele/hallo/audio"
 	"github.com/sscheele/hallo/cal"
+	"github.com/sscheele/hallo/config"
 	"github.com/sscheele/hallo/parseCmd"
+	"github.com/sscheele/hallo/weather"
 )
 
 const numDataRows = 4
@@ -71,12 +73,29 @@ func layout(g *gocui.Gui) error {
 		v.Wrap = true
 		fmt.Fprint(v, banner)
 	}
-	if v, err := g.SetView("time", maxX/2-5, maxY/2-2, maxX-1, maxY/2+1); err != nil {
+	if v, err := g.SetView("left-bg", 0, 3, maxX/2, maxY-8); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		v.Frame = false
+		v.Wrap = true
+		v.BgColor = gocui.ColorBlue
+	}
+	if v, err := g.SetView("right-bg", maxX/2, 3, maxX-1, maxY-8); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		v.Frame = false
+		v.Wrap = true
+		v.BgColor = gocui.ColorRed
+	}
+	if v, err := g.SetView("time", maxX/2-5, maxY/2-2, maxX/2+4, maxY/2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.Frame = false
 	}
+	g.SetViewOnTop("time")
 	if v, err := g.SetView("data", 0, maxY-8, maxX-1, maxY-2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -223,22 +242,23 @@ func main() {
 				//writeData([]string{fmt.Sprintf("Current Unix time: %d", t.Unix())})
 				if len(alarmList) > 0 && t.Unix() == nextAlarm.NextGoesOff.Unix() {
 					writeData([]string{"ALARM!"})
-					sig := make(chan byte, 1)
+					audioSig := make(chan byte, 1)
 					if err := g.SetKeybinding("input",
 						gocui.KeySpace,
 						gocui.ModNone,
 						func(g *gocui.Gui, v *gocui.View) error {
-							sig <- 1
+							audioSig <- 1
 							return nil
 						}); err != nil {
 						return
 					}
 					for {
-						err := audio.PlayFile("/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/audio/bell.aiff", sig)
+						err := audio.PlayFile(config.Cfg.AudioFilePath, audioSig)
 						if err == audio.ErrInterrupt {
 							break
 						}
 					}
+					go updateWeather() //make sure the weather is up-to-date after each alarm
 					newTime := alclock.NextRing(nextAlarm)
 					if newTime.Equal(nextAlarm.NextGoesOff) {
 						//alarm does not repeat, delete it
@@ -258,18 +278,27 @@ func main() {
 		for {
 			c := getCalendarUpdate()
 			writeData(c)
-			time.Sleep(15 * time.Minute) //TODO: Change this value for real purposes
+			time.Sleep(time.Duration(config.Cfg.CalUpdatePeriod) * time.Minute)
 		}
 	}()
 
-	//gmaps
-	/*
-		go func() {
-			for {
-
+	//maps
+	go func() {
+		for {
+			if len(alarmList) > 0 && alarmList[0].TripInfo != nil {
+				alarmList[0].UpdateArriveBy()
 			}
-		}()
-	*/
+			time.Sleep(time.Duration(config.Cfg.MapUpdatePeriod) * time.Minute)
+		}
+	}()
+
+	//weather
+	go func() {
+		for {
+			updateWeather()
+			time.Sleep(time.Duration(config.Cfg.WeatherUpdatePeriod) * time.Minute)
+		}
+	}()
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		fmt.Println(err)
@@ -285,6 +314,31 @@ func getCalendarUpdate() []string {
 		retVal = append(retVal, e.Summary)
 	}
 	return retVal
+}
+
+func updateWeather() {
+	wData, err := weather.GetNHours(config.Cfg.WeatherLookAhead, config.Cfg.Location[0], config.Cfg.Location[1])
+	if err != nil {
+		writeData([]string{fmt.Sprintf("Error getting weather data: %#v", err)})
+		return
+	}
+	writeData([]string{fmt.Sprintf("Current chance of precipitation: %d", wData[0].PrecipProbability)})
+	//write the current weather to the left panel and the forecast to the right panel
+	mainGUI.Execute(func(g *gocui.Gui) error {
+		v, err := g.View("left-bg")
+		if err != nil {
+			return err
+		}
+		v.Clear()
+		fmt.Fprintf(v, "Current chance of precipitation: %d", wData[0].PrecipProbability)
+		v, err = g.View("right-bg")
+		if err != nil {
+			return err
+		}
+		v.Clear()
+		fmt.Fprintf(v, "Chance of precipitation %d hours from now: %d", config.Cfg.WeatherLookAhead, wData[1].PrecipProbability)
+		return nil
+	})
 }
 
 func updateTime(t time.Time) {

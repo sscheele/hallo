@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sscheele/hallo/gmaps"
+	"github.com/sscheele/hallo/maps"
 )
 
 //ErrDateString will be returned when trying to parse an invalid date string
@@ -29,11 +29,11 @@ type Alarm struct {
 func (a *Alarm) UpdateArriveBy() {
 	var t int64
 	fmt.Fscanf(strings.NewReader(a.TripInfo["arrival_time"]), "%d", &t)
-	dur := gmaps.GetTimeToLocation(a.TripInfo)
-	if dur == 0 {
+	traff, noTraff := maps.GetTimeToLocation(a.TripInfo)
+	if traff == 0 || noTraff == 0 {
 		return
 	}
-	a.NextGoesOff = time.Unix(t-int64(dur), 0)
+	a.NextGoesOff = time.Unix(t-int64(traff), 0)
 }
 
 //EmptyAlarm returns an empty alarm which is about to go off
@@ -59,7 +59,8 @@ func NewArriveBy(arriveAt string, origin string, dest string, avoid string, week
 		"dateTime": arriveAt,
 		"avoid":    avoid,
 	}
-	retVal.NextGoesOff = time.Unix(retVal.NextGoesOff.Unix()-int64(gmaps.GetTimeToLocation(retVal.TripInfo)), 0)
+	timeUntil, _ := maps.GetTimeToLocation(retVal.TripInfo)
+	retVal.NextGoesOff = time.Unix(retVal.NextGoesOff.Unix()-int64(timeUntil), 0)
 	return
 }
 
