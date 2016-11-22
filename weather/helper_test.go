@@ -10,5 +10,5 @@ func TestNHours(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(dps[0].PrecipProbability, dps[1].PrecipProbability)
+	fmt.Println(dps[0].Temperature, dps[1].Temperature)
 }

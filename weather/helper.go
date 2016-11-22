@@ -53,17 +53,17 @@ type DataPoint struct {
 }
 
 func init() {
-	f, err := os.Open("api-key.txt")
+	f, err := os.Open("/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/weather/api-key.txt")
 	if err != nil {
 		return
 	}
+	defer f.Close()
 	reader := bufio.NewReader(f)
 	apiKey, err = reader.ReadString('\n')
 	if err != nil {
 		return
 	}
 	apiKey = apiKey[:len(apiKey)-1]
-	return
 }
 
 //GetNHours returns an array of DataPoints containing weather information for now and for n hours from now
@@ -73,7 +73,6 @@ func GetNHours(n int, lat string, long string) ([2]DataPoint, error) {
 		return retVal, ErrBadTime
 	}
 	var hourlyWeather []DataPoint
-	var currWeather DataPoint
 	res, err := getResponse(lat, long)
 	if err != nil {
 		return retVal, err
@@ -82,16 +81,12 @@ func GetNHours(n int, lat string, long string) ([2]DataPoint, error) {
 	if err != nil {
 		return retVal, err
 	}
-	currText, hourly := parseWeatherString(string(body))
+	hourly := parseWeatherString(string(body))
 	err = json.Unmarshal([]byte(hourly), &hourlyWeather)
 	if err != nil {
 		return retVal, err
 	}
-	err = json.Unmarshal([]byte(currText), &currWeather)
-	if err != nil {
-		return retVal, err
-	}
-	retVal[0] = currWeather
+	retVal[0] = hourlyWeather[0]
 	if len(hourlyWeather) < n {
 		return retVal, ErrNoData
 	}
@@ -103,31 +98,21 @@ func getResponse(lat string, long string) (*http.Response, error) {
 	return http.Get(fmt.Sprintf("https://api.darksky.net/forecast/%s/%s,%s", apiKey, lat, long))
 }
 
-//returns only the JSON of the current and hourly data
-func parseWeatherString(s string) (string, string) {
-	ind := strings.Index(s, `"currently"`)
-	if ind == -1 || ind+12 >= len(s) {
-		return "", ""
-	}
-	s = s[ind+12:]
-	ind = strings.Index(s, "}")
-	if ind == -1 || ind+1 > len(s) {
-		return "", ""
-	}
-	currentStr := s[:ind+1]
-	ind = strings.Index(s, `"hourly"`)
+//returns only the JSON of the current data
+func parseWeatherString(s string) string {
+	ind := strings.Index(s, `"hourly"`)
 	if ind == -1 || ind+9 >= len(s) {
-		return "", ""
+		return ""
 	}
 	s = s[ind+9:]
 	ind = strings.Index(s, `"data"`)
 	if ind == -1 || ind+7 >= len(s) {
-		return "", ""
+		return ""
 	}
 	s = s[ind+7:]
 	ind = strings.Index(s, "]")
 	if ind == -1 || ind+1 > len(s) {
-		return "", ""
+		return ""
 	}
-	return currentStr, s[:ind+1]
+	return s[:ind+1]
 }

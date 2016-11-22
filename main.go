@@ -29,6 +29,7 @@ var (
 	inReader       *bufio.Reader
 	inputChan      chan string
 	mainGUI        *gocui.Gui
+	useGUI         = false
 )
 
 func updateNextAlarm() {
@@ -212,25 +213,28 @@ func handleInput(s string) {
 }
 
 func main() {
-	g, err := gocui.NewGui()
-	mainGUI = g
-	if err != nil {
-		return
-	}
-	defer g.Close()
+	var g *gocui.Gui
+	if useGUI {
+		g, err := gocui.NewGui()
+		mainGUI = g
+		if err != nil {
+			return
+		}
+		defer g.Close()
 
-	g.Highlight = true
-	g.Cursor = true
-	g.SelFgColor = gocui.ColorGreen
+		g.Highlight = true
+		g.Cursor = true
+		g.SelFgColor = gocui.ColorGreen
 
-	g.SetManagerFunc(layout)
+		g.SetManagerFunc(layout)
 
-	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		return
-	}
+		if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+			return
+		}
 
-	if err := g.SetKeybinding("input", gocui.KeyEnter, gocui.ModNone, getUserInput); err != nil {
-		return
+		if err := g.SetKeybinding("input", gocui.KeyEnter, gocui.ModNone, getUserInput); err != nil {
+			return
+		}
 	}
 
 	//timer
@@ -242,21 +246,24 @@ func main() {
 				//writeData([]string{fmt.Sprintf("Current Unix time: %d", t.Unix())})
 				if len(alarmList) > 0 && t.Unix() == nextAlarm.NextGoesOff.Unix() {
 					writeData([]string{"ALARM!"})
-					audioSig := make(chan byte, 1)
-					if err := g.SetKeybinding("input",
-						gocui.KeySpace,
-						gocui.ModNone,
-						func(g *gocui.Gui, v *gocui.View) error {
-							audioSig <- 1
-							return nil
-						}); err != nil {
-						return
-					}
-					for {
-						err := audio.PlayFile(config.Cfg.AudioFilePath, audioSig)
-						if err == audio.ErrInterrupt {
-							break
+					if useGUI {
+						audioSig := make(chan byte, 1)
+						if err := g.SetKeybinding("input",
+							gocui.KeySpace,
+							gocui.ModNone,
+							func(g *gocui.Gui, v *gocui.View) error {
+								audioSig <- 1
+								return nil
+							}); err != nil {
+							return
 						}
+						for {
+							err := audio.PlayFile(config.Cfg.AudioFilePath, audioSig)
+							if err == audio.ErrInterrupt {
+								break
+							}
+						}
+						g.DeleteKeybinding("input", gocui.KeySpace, gocui.ModNone)
 					}
 					go updateWeather() //make sure the weather is up-to-date after each alarm
 					newTime := alclock.NextRing(nextAlarm)
@@ -265,7 +272,6 @@ func main() {
 						alarmList = append(alarmList[:nextAlarmIndex], alarmList[nextAlarmIndex+1:]...)
 					}
 					updateNextAlarm()
-					g.DeleteKeybinding("input", gocui.KeySpace, gocui.ModNone)
 				}
 			}()
 			time.Sleep(1 * time.Second)
@@ -300,9 +306,15 @@ func main() {
 		}
 	}()
 
-	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
-		fmt.Println(err)
-		return
+	if useGUI {
+		if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		for {
+			time.Sleep(30 * time.Second)
+		}
 	}
 }
 
@@ -317,6 +329,7 @@ func getCalendarUpdate() []string {
 }
 
 func updateWeather() {
+	writeData([]string{fmt.Sprintf("GetWeather(%d, %s, %s)", config.Cfg.WeatherLookAhead, config.Cfg.Location[0], config.Cfg.Location[1])})
 	wData, err := weather.GetNHours(config.Cfg.WeatherLookAhead, config.Cfg.Location[0], config.Cfg.Location[1])
 	if err != nil {
 		writeData([]string{fmt.Sprintf("Error getting weather data: %#v", err)})
@@ -324,47 +337,55 @@ func updateWeather() {
 	}
 	writeData([]string{fmt.Sprintf("Current chance of precipitation: %d", wData[0].PrecipProbability)})
 	//write the current weather to the left panel and the forecast to the right panel
-	mainGUI.Execute(func(g *gocui.Gui) error {
-		v, err := g.View("left-bg")
-		if err != nil {
-			return err
-		}
-		v.Clear()
-		fmt.Fprintf(v, "Current chance of precipitation: %d", wData[0].PrecipProbability)
-		v, err = g.View("right-bg")
-		if err != nil {
-			return err
-		}
-		v.Clear()
-		fmt.Fprintf(v, "Chance of precipitation %d hours from now: %d", config.Cfg.WeatherLookAhead, wData[1].PrecipProbability)
-		return nil
-	})
+	if useGUI {
+		mainGUI.Execute(func(g *gocui.Gui) error {
+			v, err := g.View("left-bg")
+			if err != nil {
+				return err
+			}
+			v.Clear()
+			fmt.Fprintf(v, "Current chance of precipitation: %d", wData[0].PrecipProbability)
+			v, err = g.View("right-bg")
+			if err != nil {
+				return err
+			}
+			v.Clear()
+			fmt.Fprintf(v, "Chance of precipitation %d hours from now: %d", config.Cfg.WeatherLookAhead, wData[1].PrecipProbability)
+			return nil
+		})
+	}
 }
 
 func updateTime(t time.Time) {
-	mainGUI.Execute(func(g *gocui.Gui) error {
-		v, err := g.View("time")
-		if err != nil {
-			return err
-		}
-		v.Clear()
-		fmt.Fprintf(v, "%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second())
-		return nil
-	})
+	if useGUI {
+		mainGUI.Execute(func(g *gocui.Gui) error {
+			v, err := g.View("time")
+			if err != nil {
+				return err
+			}
+			v.Clear()
+			fmt.Fprintf(v, "%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second())
+			return nil
+		})
+	}
 }
 
 func writeData(sArr []string) {
 	dataFieldMut.Lock()
 	for _, s := range sArr {
-		mainGUI.Execute(func(g *gocui.Gui) error {
-			v, err := g.View("data")
-			if err != nil {
-				return err
-			}
+		if useGUI {
+			mainGUI.Execute(func(g *gocui.Gui) error {
+				v, err := g.View("data")
+				if err != nil {
+					return err
+				}
 
-			fmt.Fprintln(v, s)
-			return nil
-		})
+				fmt.Fprintln(v, s)
+				return nil
+			})
+		} else {
+			fmt.Println(s)
+		}
 		time.Sleep(500 * time.Millisecond)
 	}
 	dataFieldMut.Unlock()
