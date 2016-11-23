@@ -8,3 +8,8 @@ An alarm clock can never really be a personal assistant. To make sure it stays a
 You will have to install the portaudio development headers for any audio output to work. This should be quite easy on Linux. Precompiled headers are available for Windows from various sources.
 
 If you want to build from source, you have to `go get` gocui (`go get github.com/jroimartin/gocui`). Glide DOES NOT WORK for gocui.
+
+Additionally, you will need access to the following APIs:
+- Bing Maps (I know, but Google Maps costs money)
+- Darksky
+- Google Calendar
