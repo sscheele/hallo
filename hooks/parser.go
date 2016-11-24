@@ -14,7 +14,7 @@ import (
 //WeatherHook changes the behavior of the alarm based on the weather
 type WeatherHook struct {
 	//Verify may analyze any field of a DataPoint, and returns a bool based on that analysis
-	Verify func([]func(weather.DataPoint) bool) bool
+	Verify func(weather.DataPoint) bool
 	//Action is performed if Verify returns true
 	Action string
 }
@@ -22,7 +22,7 @@ type WeatherHook struct {
 //CalendarHook changes the behavior of the alarm based on the calendar
 type CalendarHook struct {
 	//Verify may analyze a calendar event's time and summary, and returns a bool based on that analysis
-	Verify func([]func(cal.Event) bool) bool
+	Verify func(cal.Event) bool
 	//Action is performed if Verify returns true
 	Action string
 }
@@ -30,7 +30,7 @@ type CalendarHook struct {
 //ScriptHook changes the behavior of the alarm based on the output of a script
 type ScriptHook struct {
 	//Verify accepts the command to run and returns a bool based on its output
-	Verify func([]func(string) bool) bool
+	Verify func(string) bool
 	//Action is performed if Verify returns true
 	Action string
 }
@@ -47,12 +47,13 @@ var (
 //ParseWeatherHook parses a string to add a hook to WeatherHooks
 func ParseWeatherHook(s string) {
 	//Acceptable values for weather hooks: Temperature[<=>]%d, rain, snow, sleet, wind, fog, PrecipProbability[<=>]%d
+	var retVal WeatherHook
 	var hooks []func(weather.DataPoint) bool
-	cam := strings.Split(s, ":")
-	if len(cam) != 2 {
+	ca := strings.Split(s, ":")
+	if len(ca) != 2 {
 		return
 	}
-	conditions := strings.Split(cam[0], "|")
+	conditions := strings.Split(ca[0], "|")
 	for _, cond := range conditions {
 		cond = strings.ToLower(cond)
 		switch {
@@ -72,15 +73,15 @@ func ParseWeatherHook(s string) {
 			switch comp {
 			case "<":
 				hooks = append(hooks, func(dp weather.DataPoint) bool {
-					return dp.Temperature < t
+					return dp.Temperature < temp
 				})
 			case "=":
 				hooks = append(hooks, func(dp weather.DataPoint) bool {
-					return dp.Temperature == t
+					return dp.Temperature == temp
 				})
 			case ">":
 				hooks = append(hooks, func(dp weather.DataPoint) bool {
-					return dp.Temperature > t
+					return dp.Temperature > temp
 				})
 			}
 		case len(cond) > 7 && cond[:6] == "precip":
@@ -88,26 +89,36 @@ func ParseWeatherHook(s string) {
 			if len(tFields) != 2 {
 				continue
 			}
-			temp, err := strconv.ParseFloat(tFields[1], 64)
+			precip, err := strconv.ParseFloat(tFields[1], 64)
 			if err != nil {
 				continue
 			}
 			switch comp {
 			case "<":
 				hooks = append(hooks, func(dp weather.DataPoint) bool {
-					return dp.PrecipProbability < t
+					return dp.PrecipProbability < precip
 				})
 			case "=":
 				hooks = append(hooks, func(dp weather.DataPoint) bool {
-					return dp.PrecipProbability == t
+					return dp.PrecipProbability == precip
 				})
 			case ">":
 				hooks = append(hooks, func(dp weather.DataPoint) bool {
-					return dp.PrecipProbability > t
+					return dp.PrecipProbability > precip
 				})
 			}
 		}
 	}
+	retVal.Verify = func(dp weather.DataPoint) bool {
+		for _, hook := range hooks {
+			if hook(dp) {
+				return true
+			}
+		}
+		return false
+	}
+	retVal.Action = ca[1]
+	WeatherHooks = append(WeatherHooks, retVal)
 }
 
 //splitComp splits s at the first instance of a comparison (<, =, >) and returns the fields and the comparison character it found
