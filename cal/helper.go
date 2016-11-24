@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sscheele/hallo/config"
+
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -162,7 +164,7 @@ func saveToken(file string, token *oauth2.Token) {
 func GetCalendar(f func(string) string) (*calendar.Service, error) {
 	ctx := context.Background()
 
-	b, err := ioutil.ReadFile("/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/cal/client_secret.json")
+	b, err := ioutil.ReadFile(config.Cfg.CalAPIPath)
 	if err != nil {
 		//log.Fatalf("Unable to read client secret file: %v", err)
 		return nil, err

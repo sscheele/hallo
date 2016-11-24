@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/sscheele/hallo/config"
 )
 
 var (
@@ -53,7 +56,7 @@ type DataPoint struct {
 }
 
 func init() {
-	f, err := os.Open("/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/weather/api-key.txt")
+	f, err := os.Open(config.Cfg.WeatherAPIPath)
 	if err != nil {
 		return
 	}
@@ -95,7 +98,12 @@ func GetNHours(n int, lat string, long string) ([2]DataPoint, error) {
 }
 
 func getResponse(lat string, long string) (*http.Response, error) {
-	return http.Get(fmt.Sprintf("https://api.darksky.net/forecast/%s/%s,%s", apiKey, lat, long))
+	//Use a custom client to get a response so that if the API hangs, this thread doesn't stay open
+	var cClient = &http.Client{
+		Timeout: 12 * time.Second,
+	}
+	webPath := fmt.Sprintf("https://api.darksky.net/forecast/%s/%s,%s", apiKey, lat, long)
+	return cClient.Get(webPath)
 }
 
 //returns only the JSON of the current data

@@ -27,6 +27,12 @@ type Config struct {
 	AudioFilePath string
 	//TimeBeforeLeave is the number of seconds to give you before you have to leave
 	TimeBeforeLeave int
+	//WeatherAPIPath is the path to the api key for the darksky api
+	WeatherAPIPath string
+	//MapsAPIPath is the path to the api key for the bing maps api
+	MapsAPIPath string
+	//CalAPIPath is the path to the api key for Google Calendar
+	CalAPIPath string
 }
 
 func init() {
@@ -46,4 +52,7 @@ func useDefaults() {
 	Cfg.NumCalEvents = 10
 	Cfg.AudioFilePath = "audio/bell.aiff"
 	Cfg.TimeBeforeLeave = 1800 //thirty minutes
+	Cfg.WeatherAPIPath = "/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/weather/api-key.txt"
+	Cfg.MapsAPIPath = "/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/maps/api-key.txt"
+	Cfg.CalAPIPath = "/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/cal/client_secret.json"
 }

@@ -1,0 +1,12 @@
+Location = ["38.8522392", "-77.3368576"]
+CalUpdatePeriod = 15
+WeatherUpdatePeriod = 45
+WeatherLookAhead = 6
+MapUpdatePeriod = 10
+TwelveHour = false
+NumCalEvents = 10
+AudioFilePath = "audio/bell.aiff"
+TimeBeforeLeave = 1810
+WeatherAPIPath = "/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/weather/api-key.txt"
+MapsAPIPath = "/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/maps/api-key.txt"
+CalAPIPath = "/home/sam/Projects/Go/Gopath/src/github.com/sscheele/hallo/cal/client_secret.json"

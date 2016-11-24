@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/sscheele/hallo/config"
 )
 
 var apiKey string
 
 func init() {
-	f, err := os.Open("api-key.txt")
+	f, err := os.Open(config.Cfg.MapsAPIPath)
 	if err != nil {
 		return
 	}

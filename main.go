@@ -29,7 +29,7 @@ var (
 	inReader       *bufio.Reader
 	inputChan      chan string
 	mainGUI        *gocui.Gui
-	useGUI         = true
+	useGUI         = false
 )
 
 func updateNextAlarm() {
@@ -330,7 +330,6 @@ func getCalendarUpdate() []string {
 }
 
 func updateWeather() {
-	writeData([]string{fmt.Sprintf("GetWeather(%d, %s, %s)", config.Cfg.WeatherLookAhead, config.Cfg.Location[0], config.Cfg.Location[1])})
 	wData, err := weather.GetNHours(config.Cfg.WeatherLookAhead, config.Cfg.Location[0], config.Cfg.Location[1])
 	if err != nil {
 		writeData([]string{fmt.Sprintf("Error getting weather data: %#v", err)})
@@ -345,13 +344,17 @@ func updateWeather() {
 				return err
 			}
 			v.Clear()
-			fmt.Fprintf(v, "Current chance of precipitation: %v", wData[0].PrecipProbability)
+			fmt.Fprintln(v, "Right now")
+			fmt.Fprintf(v, "Precipitation: %v%%\n", 100*wData[0].PrecipProbability)
+			fmt.Fprintf(v, "Temperature: %v degrees", wData[0].Temperature)
 			v, err = g.View("right-bg")
 			if err != nil {
 				return err
 			}
 			v.Clear()
-			fmt.Fprintf(v, "Chance of precipitation %d hours from now: %v", config.Cfg.WeatherLookAhead, wData[1].PrecipProbability)
+			fmt.Fprintf(v, "%d hours from now\n", config.Cfg.WeatherLookAhead)
+			fmt.Fprintf(v, "Precipitation: %v%%\n", 100*wData[1].PrecipProbability)
+			fmt.Fprintf(v, "Temperature: %v degrees", wData[1].Temperature)
 			return nil
 		})
 	}

@@ -3,3 +3,4 @@ sphinx/*
 maps/api-key.txt
 weather/api-key.txt
 *api*
+bin/*
