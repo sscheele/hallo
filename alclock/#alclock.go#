@@ -23,6 +23,8 @@ type Alarm struct {
 	NextGoesOff time.Time
 	//TripInfo contains information about whether the alarm is an "in time for" alarm
 	TripInfo map[string]string
+	//Name is an optional identifier for your alarm. It makes it easier to ID.
+	Name string
 }
 
 //UpdateArriveBy updates the NextGoesOff atribute of an alarm to make sure it's in time for to arrive somewhere

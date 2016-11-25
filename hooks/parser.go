@@ -19,7 +19,7 @@ type WeatherHook struct {
 	Action string
 }
 
-//CalendarHook changes the behavior of the alarm based on the calendar
+//CalendarHook creates or deletes alarms based on the calendar
 type CalendarHook struct {
 	//Verify may analyze a calendar event's time and summary, and returns a bool based on that analysis
 	Verify func(cal.Event) bool
@@ -43,6 +43,38 @@ var (
 	//ScriptHooks is the list of every script hook
 	ScriptHooks []ScriptHook
 )
+
+//ParseScriptHook parses a string to add a hook to ScriptHooks
+func ParseScriptHook(s string) {
+
+}
+
+//ParseCalendarHook parses a string to add a hook to CalendarHooks
+func ParseCalendarHook(s string) {
+	//Calendar hooks allow you to do something if a calendar event contains a certain word
+	var retVal CalendarHook
+	var hooks []func(cal.Event) bool
+	ca := strings.Split(s)
+	if len(ca) != 2 {
+		return
+	}
+	conditions := strings.Split(ca[0], "|")
+	for _, cond := range conditions {
+		hooks = append(hooks, func(c cal.Event) bool {
+			return strings.Contains(c.Summary, cond)
+		})
+	}
+	retVal.Verify = func(c cal.Event) bool {
+		for _, hook := range hooks {
+			if hook(c) {
+				return true
+			}
+		}
+		return false
+	}
+	retVal.Action = ca[1]
+	CalendarHooks = append(CalendarHooks, retVal)
+}
 
 //ParseWeatherHook parses a string to add a hook to WeatherHooks
 func ParseWeatherHook(s string) {

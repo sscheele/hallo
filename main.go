@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jroimartin/gocui"
+	shellwords "github.com/mattn/go-shellwords"
 	"github.com/sscheele/hallo/alclock"
 	"github.com/sscheele/hallo/audio"
 	"github.com/sscheele/hallo/cal"
@@ -154,6 +155,7 @@ func handleInput(s string) {
 	args := strings.Split(s, " ")
 	switch args[0] {
 	case "add-alarm":
+		//add-alarm adds an alarm
 		alarmVars, err := parseCmd.ParseAlarm(s)
 		if err != nil {
 			if err == flag.ErrHelp {
@@ -170,6 +172,7 @@ func handleInput(s string) {
 				return
 			}
 			writeData([]string{"add-alarm: unknown error"})
+			return
 		}
 		alarmList = append(alarmList, a)
 		updateNextAlarm()
@@ -179,6 +182,7 @@ func handleInput(s string) {
 			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
 		}
 	case "add-arrive-by":
+		//add-arrive-by adds an alarm set to go off a certain amount of time before you have to get somewhere
 		arriveVars, err := parseCmd.ParseArriveBy(s)
 		if err != nil {
 			if err == flag.ErrHelp {
@@ -209,7 +213,20 @@ func handleInput(s string) {
 		if len(alarmList) > 0 {
 			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
 		}
+	case "echo":
+		//echo echoes text to the screen
+		args, err := shellwords.Parse(s)
+		if err != nil {
+			return
+		}
+		writeData(args)
+	case "rm-alarm":
+		//rm-alarm removes an alarm
+
+	case "list-alarm", "list-alarms":
+		//list-alarm lists currently active alarms
 	}
+
 }
 
 func main() {
@@ -322,7 +339,15 @@ func main() {
 func getCalendarUpdate() []string {
 	var retVal = []string{"Calendar updates:"}
 
-	calendarEvents := cal.GetEvents(getUserResponse)
+	calendarEvents, err := cal.GetEvents(getUserResponse)
+	if err != nil {
+		if err == cal.ErrNoEvents {
+			retVal = append(retVal, "No events")
+			return retVal
+		}
+		retVal = append(retVal, "Error getting events!")
+		return retVal
+	}
 	for _, e := range calendarEvents {
 		retVal = append(retVal, e.Summary)
 	}

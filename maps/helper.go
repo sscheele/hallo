@@ -2,10 +2,10 @@ package maps
 
 import (
 	"bufio"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sscheele/hallo/config"
@@ -37,10 +37,6 @@ func GetTimeToLocation(params map[string]string) (int, int) {
 //returns the trip length in seconds, both with and without traffic
 func getTripLen(respBody string) (int, int) {
 	//LOOK FOR "travelDurationTraffic"
-	var (
-		rv1 int
-		rv2 int
-	)
 	traffInd := strings.LastIndex(respBody, `"travelDurationTraffic"`)
 	noTraffInd := strings.LastIndex(respBody, `"travelDuration"`)
 	if traffInd == -1 || noTraffInd == -1 {
@@ -53,24 +49,19 @@ func getTripLen(respBody string) (int, int) {
 		//do nothing; we only care about i
 	}
 	noTraffStr := respBody[noTraffInd:i]
-	fmt.Fscanf(strings.NewReader(noTraffStr), "%d", &rv2)
+	rv2, err := strconv.Atoi(noTraffStr)
+	if err != nil {
+		return -1, -1
+	}
 	for i = traffInd; !isSeparator(respBody[i]); i++ {
 		//do nothing; we only care about i
 	}
 	traffStr := respBody[traffInd:i]
-	fmt.Fscanf(strings.NewReader(traffStr), "%d", &rv1)
+	rv1, err := strconv.Atoi(traffStr)
+	if err != nil {
+		return -1, -1 //error value
+	}
 
-	//DEBUG
-	/*
-		dataInd := strings.LastIndex(respBody, `"trafficDataUsed"`)
-		if dataInd == -1 {
-			return rv1, rv2
-		}
-		for i = dataInd + 18; !isSeparator(respBody[i]); i++ {
-			//still only care about i
-		}
-		fmt.Println(respBody[dataInd:i])
-	*/
 	return rv1, rv2
 }
 

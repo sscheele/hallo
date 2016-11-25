@@ -2,6 +2,7 @@ package cal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,6 +21,9 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
 )
+
+//ErrNoEvents is returned when there are no events
+var ErrNoEvents = errors.New("No events")
 
 //Event contains a description and time for an event
 type Event struct {
@@ -54,7 +58,7 @@ func NewEventTime() EventTime {
 }
 
 //GetEvents returns the next ten calendar events
-func GetEvents(f func(string) string) (retVal []Event) {
+func GetEvents(f func(string) string) (retVal []Event, err error) {
 	srv, err := GetCalendar(f)
 	if err != nil {
 		return
@@ -66,6 +70,7 @@ func GetEvents(f func(string) string) (retVal []Event) {
 	}
 
 	if len(events.Items) == 0 {
+		err = ErrNoEvents
 		return
 	}
 
@@ -77,7 +82,7 @@ func GetEvents(f func(string) string) (retVal []Event) {
 		if i.Start.DateTime != "" {
 			when = i.Start.DateTime
 			//Dates are formatted according to RFC3339
-			when = when[:19]
+			when = when[:19] //remove time zone
 			fmt.Fscanf(strings.NewReader(when), "%s-%s-%sT%s:%s:%s", &t.Year, &t.Month, &t.Day, &t.Hour, &t.Minute, &t.Second)
 			t.IsAllDay = false
 			//fmt.Printf("Hour: %d, Minute: %d, Second: %d ", hour, minute, second)
@@ -89,7 +94,7 @@ func GetEvents(f func(string) string) (retVal []Event) {
 		retVal = append(retVal, Event{Summary: i.Summary, DateTime: t})
 	}
 
-	return retVal
+	return
 }
 
 // getClient uses a Context and Config to retrieve a Token
