@@ -30,7 +30,7 @@ var (
 	inReader       *bufio.Reader
 	inputChan      chan string
 	mainGUI        *gocui.Gui
-	useGUI         = false
+	useGUI         = true
 )
 
 func updateNextAlarm() {
@@ -145,8 +145,6 @@ func getUserInput(g *gocui.Gui, v *gocui.View) error {
 	}
 
 	handleInput(s)
-	//writeData([]string{s})
-	//^ HANDLE USER INPUT INSTEAD
 
 	return nil
 }
@@ -165,7 +163,7 @@ func handleInput(s string) {
 			writeData([]string{"Error parsing arguments"})
 			return
 		}
-		a, err := alclock.NewAlarm(alarmVars.DateString, strings.Split(alarmVars.Weekdays, " "))
+		a, err := alclock.NewAlarm(alarmVars.DateString, strings.Split(alarmVars.Weekdays, " "), alarmVars.Name)
 		if err != nil {
 			if err == alclock.ErrDateString {
 				writeData([]string{"add-alarm: date string improperly formatted"})
@@ -198,6 +196,7 @@ func handleInput(s string) {
 			arriveVars.Destination,
 			arriveVars.Avoid,
 			strings.Split(arriveVars.Weekdays, " "),
+			arriveVars.Name,
 		)
 		if err != nil {
 			if err == alclock.ErrDateString {
@@ -216,15 +215,37 @@ func handleInput(s string) {
 	case "echo":
 		//echo echoes text to the screen
 		args, err := shellwords.Parse(s)
-		if err != nil {
+		if err != nil || len(args) < 2 {
+			writeData([]string{"Error parsing arguments"})
 			return
 		}
-		writeData(args)
+		writeData(args[1:])
 	case "rm-alarm":
 		//rm-alarm removes an alarm
+		args, err := shellwords.Parse(s)
+		if err != nil || len(args) < 2 {
+			writeData([]string{"Error parsing arguments"})
+			return
+		}
+		var rmList map[string]struct{}
+		for _, i := range args[1:] {
+			rmList[i] = struct{}{}
+		}
+		for i, elem := range alarmList {
+			_, ok := rmList[elem.Name]
+			if ok {
+				alarmList = append(alarmList[:i], alarmList[i+1:]...)
+				i--
+			}
+		}
 
 	case "list-alarm", "list-alarms":
 		//list-alarm lists currently active alarms
+		var retVal []string
+		for _, al := range alarmList {
+			retVal = append(retVal, fmt.Sprintf("{%s: %s-%s-%sT%s:%s:%s}", al.Name, al.DateTime["year"], al.DateTime["month"], al.DateTime["day"], al.DateTime["hour"], al.DateTime["minute"], al.DateTime["second"]))
+		}
+		writeData(retVal)
 	}
 
 }
@@ -330,6 +351,7 @@ func main() {
 			return
 		}
 	} else {
+		handleInput(`add-arrive-by -date=2016-11-25T19:30:00 -start="8918 Colesbury Pl, Fairfax, VA" -end="Ultimate Basketball Training"`)
 		for {
 			time.Sleep(30 * time.Second)
 		}
