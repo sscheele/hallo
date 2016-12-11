@@ -18,30 +18,62 @@ import (
 	"github.com/sscheele/hallo/weather"
 )
 
+//LLNode is a node of a linkedlist of alarms
+type LLNode struct {
+	//Alarm is the content of the node
+	Alarm alclock.Alarm
+	//Next is a pointer to the next node
+	Next *LLNode
+}
+
 const numDataRows = 4
 const banner = ` |_| _ | | _
  | |(_|| |(_)`
 
 var (
-	alarmList      []alclock.Alarm
-	nextAlarm      alclock.Alarm
-	nextAlarmIndex int
-	dataFieldMut   sync.Mutex
-	inReader       *bufio.Reader
-	inputChan      chan string
-	mainGUI        *gocui.Gui
-	useGUI         = true
+	alarmList    *LLNode
+	alarmTail    *LLNode
+	nextAlarm    alclock.Alarm
+	dataFieldMut sync.Mutex
+	inReader     *bufio.Reader
+	inputChan    chan string
+	mainGUI      *gocui.Gui
+	disableGUI   bool
+	configFile   string
 )
 
-func updateNextAlarm() {
-	if !(len(alarmList) > 0) {
+func init() {
+	flag.BoolVar(&disableGUI, "noui", false, "toggle to disable ui")
+	flag.StringVar(&configFile, "config", "", "specify a config file (.toml format)")
+	flag.Parse()
+
+	config.InitToml(configFile)
+}
+
+//updateAlarmList prunes the alarm list to remove old alarms and finds the next alarm to go off
+func updateAlarmList() {
+	if alarmList == nil {
 		return
 	}
-	tempMin := alarmList[0]
-	for i, al := range alarmList {
-		if al.NextGoesOff.Before(tempMin.NextGoesOff) {
-			tempMin = al
-			nextAlarmIndex = i
+	tempMin := (*alarmList).Alarm
+	var prev *LLNode
+	for i := alarmList; i != nil; i = i.Next {
+		(*i).Alarm.NextGoesOff = alclock.NextRing((*i).Alarm)
+		writeData([]string{fmt.Sprintf("Alarm:\n%v\nnext goes of on: %d", (*i).Alarm, (*i).Alarm.NextGoesOff.Unix())})
+		if (*i).Alarm.NextGoesOff.Before(time.Now()) {
+			writeData([]string{"Deleting"})
+			if prev == nil && alarmList != nil {
+				alarmList = alarmList.Next
+			} else if alarmList != nil {
+				(*prev).Next = i.Next
+				if i == alarmTail {
+					alarmTail = prev
+				}
+			}
+		} else if (*i).Alarm.NextGoesOff.Before(tempMin.NextGoesOff) {
+			tempMin = (*i).Alarm
+			//only do prev = i if i has not been deleted, otherwise prev is the same
+			prev = i
 		}
 	}
 	nextAlarm = tempMin
@@ -172,12 +204,22 @@ func handleInput(s string) {
 			writeData([]string{"add-alarm: unknown error"})
 			return
 		}
-		alarmList = append(alarmList, a)
-		updateNextAlarm()
+		if alarmList == nil {
+			alarmList = &LLNode{
+				Alarm: a,
+				Next:  nil,
+			}
+		} else {
+			alarmTail.Next = &LLNode{
+				Alarm: a,
+				Next:  nil,
+			}
+			alarmTail = alarmTail.Next
+		}
+		updateAlarmList()
 		//DEBUG
-		writeData([]string{fmt.Sprintf("Length of alarmList is: %d", len(alarmList))})
-		if len(alarmList) > 0 {
-			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
+		if alarmList != nil {
+			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", nextAlarm.NextGoesOff.Unix())})
 		}
 	case "add-arrive-by":
 		//add-arrive-by adds an alarm set to go off a certain amount of time before you have to get somewhere
@@ -200,17 +242,27 @@ func handleInput(s string) {
 		)
 		if err != nil {
 			if err == alclock.ErrDateString {
-				writeData([]string{"add-alarm: date string improperly formatted"})
+				writeData([]string{"add-arrive-by: date string improperly formatted"})
 				return
 			}
-			writeData([]string{"add-alarm: unknown error"})
+			writeData([]string{"add-arrive-by: unknown error"})
 		}
-		alarmList = append(alarmList, a)
-		updateNextAlarm()
-		//DEBUG
-		writeData([]string{fmt.Sprintf("Length of alarmList is: %d", len(alarmList))})
-		if len(alarmList) > 0 {
-			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", alarmList[0].NextGoesOff.Unix())})
+		if alarmList == nil {
+			alarmList = &LLNode{
+				Alarm: a,
+				Next:  nil,
+			}
+		} else {
+			alarmTail.Next = &LLNode{
+				Alarm: a,
+				Next:  nil,
+			}
+			alarmTail = alarmTail.Next
+		}
+		updateAlarmList()
+
+		if alarmList != nil {
+			writeData([]string{fmt.Sprintf("Unix time of next alarm: %d", nextAlarm.NextGoesOff.Unix())})
 		}
 	case "echo":
 		//echo echoes text to the screen
@@ -231,19 +283,24 @@ func handleInput(s string) {
 		for _, i := range args[1:] {
 			rmList[i] = struct{}{}
 		}
-		for i, elem := range alarmList {
-			_, ok := rmList[elem.Name]
+		var prev *LLNode
+		for i := alarmList; i != nil; i = i.Next {
+			_, ok := rmList[(*i).Alarm.Name]
 			if ok {
-				alarmList = append(alarmList[:i], alarmList[i+1:]...)
-				i--
+				if prev == nil && alarmList != nil {
+					alarmList = alarmList.Next
+				} else if alarmList != nil {
+					(*prev).Next = (*i).Next
+				}
 			}
+			prev = i
 		}
-
+		updateAlarmList()
 	case "list-alarm", "list-alarms":
 		//list-alarm lists currently active alarms
 		var retVal []string
-		for _, al := range alarmList {
-			retVal = append(retVal, fmt.Sprintf("{%s: %s-%s-%sT%s:%s:%s}", al.Name, al.DateTime["year"], al.DateTime["month"], al.DateTime["day"], al.DateTime["hour"], al.DateTime["minute"], al.DateTime["second"]))
+		for al := alarmList; al != nil; al = al.Next {
+			retVal = append(retVal, fmt.Sprintf("{%s: %s-%s-%sT%s:%s:%s}", (*al).Alarm.Name, (*al).Alarm.DateTime["year"], (*al).Alarm.DateTime["month"], (*al).Alarm.DateTime["day"], (*al).Alarm.DateTime["hour"], (*al).Alarm.DateTime["minute"], (*al).Alarm.DateTime["second"]))
 		}
 		writeData(retVal)
 	}
@@ -252,7 +309,7 @@ func handleInput(s string) {
 
 func main() {
 	var g *gocui.Gui
-	if useGUI {
+	if !disableGUI {
 		var err error
 		g, err = gocui.NewGui()
 		mainGUI = g
@@ -282,10 +339,9 @@ func main() {
 			t := time.Now()
 			updateTime(t)
 			go func() {
-				//writeData([]string{fmt.Sprintf("Current Unix time: %d", t.Unix())})
-				if len(alarmList) > 0 && t.Unix() == nextAlarm.NextGoesOff.Unix() {
+				if alarmList != nil && t.Unix() == nextAlarm.NextGoesOff.Unix() {
 					writeData([]string{"ALARM!"})
-					if useGUI {
+					if !disableGUI {
 						audioSig := make(chan byte, 1)
 						if err := g.SetKeybinding("input",
 							gocui.KeySpace,
@@ -305,12 +361,7 @@ func main() {
 						g.DeleteKeybinding("input", gocui.KeySpace, gocui.ModNone)
 					}
 					go updateWeather() //make sure the weather is up-to-date after each alarm
-					newTime := alclock.NextRing(nextAlarm)
-					if newTime.Equal(nextAlarm.NextGoesOff) {
-						//alarm does not repeat, delete it
-						alarmList = append(alarmList[:nextAlarmIndex], alarmList[nextAlarmIndex+1:]...)
-					}
-					updateNextAlarm()
+					updateAlarmList()
 				}
 			}()
 			time.Sleep(1 * time.Second)
@@ -330,8 +381,8 @@ func main() {
 	//maps
 	go func() {
 		for {
-			if len(alarmList) > 0 && alarmList[0].TripInfo != nil {
-				alarmList[0].UpdateArriveBy()
+			for i := alarmList; i != nil; i = i.Next {
+				(*i).Alarm.UpdateArriveBy()
 			}
 			time.Sleep(time.Duration(config.Cfg.MapUpdatePeriod) * time.Minute)
 		}
@@ -345,13 +396,15 @@ func main() {
 		}
 	}()
 
-	if useGUI {
+	if !disableGUI {
 		if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 			fmt.Println(err)
 			return
 		}
 	} else {
-		handleInput(`add-arrive-by -date=2016-11-25T19:30:00 -start="8918 Colesbury Pl, Fairfax, VA" -end="Ultimate Basketball Training"`)
+		handleInput(`add-alarm -date=2016-*-*T*:*:00`)
+		handleInput(`add-alarm -date=2016-*-*T*:*:30`)
+		handleInput("list-alarms")
 		for {
 			time.Sleep(30 * time.Second)
 		}
@@ -384,7 +437,7 @@ func updateWeather() {
 	}
 	writeData([]string{fmt.Sprintf("Current chance of precipitation: %v", wData[0].PrecipProbability)})
 	//write the current weather to the left panel and the forecast to the right panel
-	if useGUI {
+	if !disableGUI {
 		mainGUI.Execute(func(g *gocui.Gui) error {
 			v, err := g.View("left-bg")
 			if err != nil {
@@ -408,7 +461,7 @@ func updateWeather() {
 }
 
 func updateTime(t time.Time) {
-	if useGUI {
+	if !disableGUI {
 		mainGUI.Execute(func(g *gocui.Gui) error {
 			v, err := g.View("time")
 			if err != nil {
@@ -422,9 +475,9 @@ func updateTime(t time.Time) {
 }
 
 func writeData(sArr []string) {
-	dataFieldMut.Lock()
-	for _, s := range sArr {
-		if useGUI {
+	if !disableGUI {
+		dataFieldMut.Lock()
+		for _, s := range sArr {
 			mainGUI.Execute(func(g *gocui.Gui) error {
 				v, err := g.View("data")
 				if err != nil {
@@ -434,10 +487,13 @@ func writeData(sArr []string) {
 				fmt.Fprintln(v, s)
 				return nil
 			})
-		} else {
+			time.Sleep(500 * time.Millisecond)
+		}
+		dataFieldMut.Unlock()
+	} else {
+		for _, s := range sArr {
 			fmt.Println(s)
 		}
-		time.Sleep(500 * time.Millisecond)
 	}
-	dataFieldMut.Unlock()
+
 }

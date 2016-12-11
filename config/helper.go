@@ -35,8 +35,9 @@ type Config struct {
 	CalAPIPath string
 }
 
-func init() {
-	_, err := toml.DecodeFile("config.toml", &Cfg)
+//InitToml initializes a configuration with a toml file
+func InitToml(s string) {
+	_, err := toml.DecodeFile(s, &Cfg)
 	if err != nil {
 		useDefaults()
 	}
