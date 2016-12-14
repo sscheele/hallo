@@ -455,5 +455,4 @@ func writeData(sArr []string) {
 			fmt.Println(s)
 		}
 	}
-
 }

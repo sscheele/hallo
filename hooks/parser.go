@@ -1,6 +1,8 @@
 package hooks
 
 import (
+	"io/ioutil"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -8,8 +10,9 @@ import (
 	"github.com/sscheele/hallo/weather"
 )
 
-//all hooks should be formatted like this (only OR is supported):
+//all hooks should be formatted like this except script hooks (only OR is supported):
 //condition_1|condition_2:action
+//script hooks may only have one condition, and their only action is to disable the alarm
 
 //WeatherHook changes the behavior of the alarm based on the weather
 type WeatherHook struct {
@@ -27,10 +30,10 @@ type CalendarHook struct {
 	Action string
 }
 
-//ScriptHook changes the behavior of the alarm based on the output of a script
+//ScriptHook may "disable" an alarm based on the output of a script
 type ScriptHook struct {
-	//Verify accepts the command to run and returns a bool based on its output
-	Verify func(string) bool
+	//Verify returns a bool based on the output of a command
+	Verify func() bool
 	//Action is performed if Verify returns true
 	Action string
 }
@@ -46,7 +49,27 @@ var (
 
 //ParseScriptHook parses a string to add a hook to ScriptHooks
 func ParseScriptHook(s string) {
-
+	ScriptHooks = append(ScriptHooks, ScriptHook{
+		Verify: func() bool {
+			cmd := exec.Command(s)
+			sout, err := cmd.StdoutPipe()
+			if err != nil {
+				return false
+			}
+			_, err := cmd.StderrPipe()
+			if err != nil {
+				return false
+			}
+			if err := cmd.Start(); err != nil {
+				return false
+			}
+			retVal, err := ioutil.ReadAll(sout)
+			if len(retVal) > 0 && (retVal[0] == "t" || retVal[0] == "T") {
+				return true
+			}
+			return false
+		},
+	})
 }
 
 //ParseCalendarHook parses a string to add a hook to CalendarHooks
