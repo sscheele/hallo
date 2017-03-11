@@ -83,9 +83,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Datasets *DatasetsService
 
@@ -103,6 +104,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewDatasetsService(s *Service) *DatasetsService {
@@ -727,6 +732,9 @@ type ExplainQueryStage struct {
 	// RecordsWritten: Number of records written by the stage.
 	RecordsWritten int64 `json:"recordsWritten,omitempty,string"`
 
+	// Status: Current status for the stage.
+	Status string `json:"status,omitempty"`
+
 	// Steps: List of operations within the stage in dependency order
 	// (approximately chronological).
 	Steps []*ExplainQueryStep `json:"steps,omitempty"`
@@ -769,6 +777,34 @@ func (s *ExplainQueryStage) MarshalJSON() ([]byte, error) {
 	type noMethod ExplainQueryStage
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+func (s *ExplainQueryStage) UnmarshalJSON(data []byte) error {
+	type noMethod ExplainQueryStage
+	var s1 struct {
+		ComputeRatioAvg gensupport.JSONFloat64 `json:"computeRatioAvg"`
+		ComputeRatioMax gensupport.JSONFloat64 `json:"computeRatioMax"`
+		ReadRatioAvg    gensupport.JSONFloat64 `json:"readRatioAvg"`
+		ReadRatioMax    gensupport.JSONFloat64 `json:"readRatioMax"`
+		WaitRatioAvg    gensupport.JSONFloat64 `json:"waitRatioAvg"`
+		WaitRatioMax    gensupport.JSONFloat64 `json:"waitRatioMax"`
+		WriteRatioAvg   gensupport.JSONFloat64 `json:"writeRatioAvg"`
+		WriteRatioMax   gensupport.JSONFloat64 `json:"writeRatioMax"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.ComputeRatioAvg = float64(s1.ComputeRatioAvg)
+	s.ComputeRatioMax = float64(s1.ComputeRatioMax)
+	s.ReadRatioAvg = float64(s1.ReadRatioAvg)
+	s.ReadRatioMax = float64(s1.ReadRatioMax)
+	s.WaitRatioAvg = float64(s1.WaitRatioAvg)
+	s.WaitRatioMax = float64(s1.WaitRatioMax)
+	s.WriteRatioAvg = float64(s1.WriteRatioAvg)
+	s.WriteRatioMax = float64(s1.WriteRatioMax)
+	return nil
 }
 
 type ExplainQueryStep struct {
@@ -1123,11 +1159,10 @@ type JobConfiguration struct {
 
 	// Labels: [Experimental] The labels associated with this job. You can
 	// use these to organize and group your jobs. Label keys and values can
-	// be no longer than 63 characters, can only contain letters, numeric
-	// characters, underscores and dashes. International characters are
-	// allowed. Label values are optional. Label keys must start with a
-	// letter and must be unique within a dataset. Both keys and values are
-	// additionally constrained to be <= 128 bytes in size.
+	// be no longer than 63 characters, can only contain lowercase letters,
+	// numeric characters, underscores and dashes. International characters
+	// are allowed. Label values are optional. Label keys must start with a
+	// letter and each label in the list must have a different key.
 	Labels map[string]string `json:"labels,omitempty"`
 
 	// Load: [Pick one] Configures a load job.
@@ -1279,6 +1314,15 @@ type JobConfigurationLoad struct {
 	// valid.
 	MaxBadRecords int64 `json:"maxBadRecords,omitempty"`
 
+	// NullMarker: [Optional] Specifies a string that represents a null
+	// value in a CSV file. For example, if you specify "\N", BigQuery
+	// interprets "\N" as a null value when loading a CSV file. The default
+	// value is the empty string. If you set this property to a custom
+	// value, BigQuery still interprets the empty string as a null value for
+	// all data types except for STRING and BYTE. For STRING and BYTE
+	// columns, BigQuery interprets the empty string as an empty value.
+	NullMarker string `json:"nullMarker,omitempty"`
+
 	// ProjectionFields: [Experimental] If sourceFormat is set to
 	// "DATASTORE_BACKUP", indicates which entity properties to load into
 	// BigQuery from a Cloud Datastore backup. Property names are case
@@ -1423,8 +1467,9 @@ type JobConfigurationQuery struct {
 	// your project default.
 	MaximumBytesBilled int64 `json:"maximumBytesBilled,omitempty,string"`
 
-	// ParameterMode: [Experimental] Standard SQL only. Whether to use
-	// positional (?) or named (@myparam) query parameters in this query.
+	// ParameterMode: [Experimental] Standard SQL only. Set to POSITIONAL to
+	// use positional (?) query parameters or to NAMED to use named
+	// (@myparam) query parameters in this query.
 	ParameterMode string `json:"parameterMode,omitempty"`
 
 	// PreserveNulls: [Deprecated] This property is deprecated.
@@ -1459,9 +1504,9 @@ type JobConfigurationQuery struct {
 	// source can then be queried as if it were a standard BigQuery table.
 	TableDefinitions map[string]ExternalDataConfiguration `json:"tableDefinitions,omitempty"`
 
-	// UseLegacySql: [Experimental] Specifies whether to use BigQuery's
-	// legacy SQL dialect for this query. The default value is true. If set
-	// to false, the query will use BigQuery's standard SQL:
+	// UseLegacySql: Specifies whether to use BigQuery's legacy SQL dialect
+	// for this query. The default value is true. If set to false, the query
+	// will use BigQuery's standard SQL:
 	// https://cloud.google.com/bigquery/sql-reference/ When useLegacySql is
 	// set to false, the values of allowLargeResults and flattenResults are
 	// ignored; query will be run as if allowLargeResults is true and
@@ -1776,6 +1821,10 @@ type JobStatistics2 struct {
 	// Schema: [Output-only, Experimental] The schema of the results.
 	// Present only for successful dry run of non-legacy SQL queries.
 	Schema *TableSchema `json:"schema,omitempty"`
+
+	// StatementType: [Output-only, Experimental] The type of query
+	// statement, if valid.
+	StatementType string `json:"statementType,omitempty"`
 
 	// TotalBytesBilled: [Output-only] Total bytes billed for the job.
 	TotalBytesBilled int64 `json:"totalBytesBilled,omitempty,string"`
@@ -2192,8 +2241,9 @@ type QueryRequest struct {
 	// only the byte limit applies.
 	MaxResults int64 `json:"maxResults,omitempty"`
 
-	// ParameterMode: [Experimental] Standard SQL only. Whether to use
-	// positional (?) or named (@myparam) query parameters in this query.
+	// ParameterMode: [Experimental] Standard SQL only. Set to POSITIONAL to
+	// use positional (?) query parameters or to NAMED to use named
+	// (@myparam) query parameters in this query.
 	ParameterMode string `json:"parameterMode,omitempty"`
 
 	// PreserveNulls: [Deprecated] This property is deprecated.
@@ -2217,9 +2267,9 @@ type QueryRequest struct {
 	// results. The default value is 10000 milliseconds (10 seconds).
 	TimeoutMs int64 `json:"timeoutMs,omitempty"`
 
-	// UseLegacySql: [Experimental] Specifies whether to use BigQuery's
-	// legacy SQL dialect for this query. The default value is true. If set
-	// to false, the query will use BigQuery's standard SQL:
+	// UseLegacySql: Specifies whether to use BigQuery's legacy SQL dialect
+	// for this query. The default value is true. If set to false, the query
+	// will use BigQuery's standard SQL:
 	// https://cloud.google.com/bigquery/sql-reference/ When useLegacySql is
 	// set to false, the values of allowLargeResults and flattenResults are
 	// ignored; query will be run as if allowLargeResults is true and
@@ -2407,6 +2457,15 @@ type Table struct {
 
 	// Kind: [Output-only] The type of the resource.
 	Kind string `json:"kind,omitempty"`
+
+	// Labels: [Experimental] The labels associated with this table. You can
+	// use these to organize and group your tables. Label keys and values
+	// can be no longer than 63 characters, can only contain lowercase
+	// letters, numeric characters, underscores and dashes. International
+	// characters are allowed. Label values are optional. Label keys must
+	// start with a letter and each label in the list must have a different
+	// key.
+	Labels map[string]string `json:"labels,omitempty"`
 
 	// LastModifiedTime: [Output-only] The time when this table was last
 	// modified, in milliseconds since the epoch.
@@ -2724,9 +2783,10 @@ type TableFieldSchema struct {
 	Name string `json:"name,omitempty"`
 
 	// Type: [Required] The field data type. Possible values include STRING,
-	// BYTES, INTEGER, FLOAT, BOOLEAN, TIMESTAMP, DATE, TIME, DATETIME, or
-	// RECORD (where RECORD indicates that the field contains a nested
-	// schema).
+	// BYTES, INTEGER, INT64 (same as INTEGER), FLOAT, FLOAT64 (same as
+	// FLOAT), BOOLEAN, BOOL (same as BOOLEAN), TIMESTAMP, DATE, TIME,
+	// DATETIME, RECORD (where RECORD indicates that the field contains a
+	// nested schema) or STRUCT (same as RECORD).
 	Type string `json:"type,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Description") to
@@ -2805,11 +2865,18 @@ type TableListTables struct {
 	// Kind: The resource type.
 	Kind string `json:"kind,omitempty"`
 
+	// Labels: [Experimental] The labels associated with this table. You can
+	// use these to organize and group your tables.
+	Labels map[string]string `json:"labels,omitempty"`
+
 	// TableReference: A reference uniquely identifying the table.
 	TableReference *TableReference `json:"tableReference,omitempty"`
 
 	// Type: The type of table. Possible values are: TABLE, VIEW.
 	Type string `json:"type,omitempty"`
+
+	// View: Additional details for a view.
+	View *TableListTablesView `json:"view,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "FriendlyName") to
 	// unconditionally include in API requests. By default, fields with
@@ -2830,6 +2897,35 @@ type TableListTables struct {
 
 func (s *TableListTables) MarshalJSON() ([]byte, error) {
 	type noMethod TableListTables
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// TableListTablesView: Additional details for a view.
+type TableListTablesView struct {
+	// UseLegacySql: True if view is defined in legacy SQL dialect, false if
+	// in standard SQL.
+	UseLegacySql bool `json:"useLegacySql,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "UseLegacySql") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "UseLegacySql") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *TableListTablesView) MarshalJSON() ([]byte, error) {
+	type noMethod TableListTablesView
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -2994,9 +3090,9 @@ type ViewDefinition struct {
 	// referenced.
 	Query string `json:"query,omitempty"`
 
-	// UseLegacySql: [Experimental] Specifies whether to use BigQuery's
-	// legacy SQL for this view. The default value is true. If set to false,
-	// the view will use BigQuery's standard SQL:
+	// UseLegacySql: Specifies whether to use BigQuery's legacy SQL for this
+	// view. The default value is true. If set to false, the view will use
+	// BigQuery's standard SQL:
 	// https://cloud.google.com/bigquery/sql-reference/ Queries and views
 	// that reference this view must use the same flag value.
 	UseLegacySql bool `json:"useLegacySql,omitempty"`
@@ -3036,6 +3132,7 @@ type DatasetsDeleteCall struct {
 	datasetId  string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes the dataset specified by the datasetId value. Before
@@ -3073,9 +3170,22 @@ func (c *DatasetsDeleteCall) Context(ctx context.Context) *DatasetsDeleteCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *DatasetsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *DatasetsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "projects/{projectId}/datasets/{datasetId}")
@@ -3146,6 +3256,7 @@ type DatasetsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Returns the dataset specified by datasetID.
@@ -3182,9 +3293,22 @@ func (c *DatasetsGetCall) Context(ctx context.Context) *DatasetsGetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *DatasetsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *DatasetsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -3281,6 +3405,7 @@ type DatasetsInsertCall struct {
 	dataset    *Dataset
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Creates a new empty dataset.
@@ -3307,9 +3432,22 @@ func (c *DatasetsInsertCall) Context(ctx context.Context) *DatasetsInsertCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *DatasetsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *DatasetsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.dataset)
 	if err != nil {
@@ -3402,6 +3540,7 @@ type DatasetsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists all datasets in the specified project to which you have
@@ -3469,9 +3608,22 @@ func (c *DatasetsListCall) Context(ctx context.Context) *DatasetsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *DatasetsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *DatasetsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -3603,6 +3755,7 @@ type DatasetsPatchCall struct {
 	dataset    *Dataset
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Patch: Updates information in an existing dataset. The update method
@@ -3633,9 +3786,22 @@ func (c *DatasetsPatchCall) Context(ctx context.Context) *DatasetsPatchCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *DatasetsPatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *DatasetsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.dataset)
 	if err != nil {
@@ -3737,6 +3903,7 @@ type DatasetsUpdateCall struct {
 	dataset    *Dataset
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Updates information in an existing dataset. The update method
@@ -3766,9 +3933,22 @@ func (c *DatasetsUpdateCall) Context(ctx context.Context) *DatasetsUpdateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *DatasetsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *DatasetsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.dataset)
 	if err != nil {
@@ -3869,6 +4049,7 @@ type JobsCancelCall struct {
 	jobId      string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Cancel: Requests that a job be cancelled. This call will return
@@ -3898,9 +4079,22 @@ func (c *JobsCancelCall) Context(ctx context.Context) *JobsCancelCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *JobsCancelCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *JobsCancelCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "projects/{projectId}/jobs/{jobId}/cancel")
@@ -3994,6 +4188,7 @@ type JobsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Returns information about a specific job. Job information is
@@ -4032,9 +4227,22 @@ func (c *JobsGetCall) Context(ctx context.Context) *JobsGetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *JobsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *JobsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -4132,6 +4340,7 @@ type JobsGetQueryResultsCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetQueryResults: Retrieves the results of a query job.
@@ -4198,9 +4407,22 @@ func (c *JobsGetQueryResultsCall) Context(ctx context.Context) *JobsGetQueryResu
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *JobsGetQueryResultsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *JobsGetQueryResultsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -4346,6 +4568,7 @@ type JobsInsertCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Insert: Starts a new asynchronous job. Requires the Can View project
@@ -4421,9 +4644,22 @@ func (c *JobsInsertCall) Context(ctx context.Context) *JobsInsertCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *JobsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *JobsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.job)
 	if err != nil {
@@ -4583,6 +4819,7 @@ type JobsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists all jobs that you started in the specified project. Job
@@ -4666,9 +4903,22 @@ func (c *JobsListCall) Context(ctx context.Context) *JobsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *JobsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *JobsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -4823,6 +5073,7 @@ type JobsQueryCall struct {
 	queryrequest *QueryRequest
 	urlParams_   gensupport.URLParams
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Query: Runs a BigQuery SQL query synchronously and returns query
@@ -4850,9 +5101,22 @@ func (c *JobsQueryCall) Context(ctx context.Context) *JobsQueryCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *JobsQueryCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *JobsQueryCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.queryrequest)
 	if err != nil {
@@ -4945,6 +5209,7 @@ type ProjectsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists all projects to which you have been granted any project
@@ -4994,9 +5259,22 @@ func (c *ProjectsListCall) Context(ctx context.Context) *ProjectsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ProjectsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ProjectsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -5107,6 +5385,7 @@ type TabledataInsertAllCall struct {
 	tabledatainsertallrequest *TableDataInsertAllRequest
 	urlParams_                gensupport.URLParams
 	ctx_                      context.Context
+	header_                   http.Header
 }
 
 // InsertAll: Streams data into BigQuery one record at a time without
@@ -5136,9 +5415,22 @@ func (c *TabledataInsertAllCall) Context(ctx context.Context) *TabledataInsertAl
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TabledataInsertAllCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TabledataInsertAllCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.tabledatainsertallrequest)
 	if err != nil {
@@ -5250,6 +5542,7 @@ type TabledataListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Retrieves table data from a specified set of rows. Requires the
@@ -5309,9 +5602,22 @@ func (c *TabledataListCall) Context(ctx context.Context) *TabledataListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TabledataListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TabledataListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -5455,6 +5761,7 @@ type TablesDeleteCall struct {
 	tableId    string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes the table specified by tableId from the dataset. If
@@ -5483,9 +5790,22 @@ func (c *TablesDeleteCall) Context(ctx context.Context) *TablesDeleteCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TablesDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TablesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "projects/{projectId}/datasets/{datasetId}/tables/{tableId}")
@@ -5560,6 +5880,7 @@ type TablesGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets the specified table resource by table ID. This method does
@@ -5599,9 +5920,22 @@ func (c *TablesGetCall) Context(ctx context.Context) *TablesGetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TablesGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TablesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -5707,6 +6041,7 @@ type TablesInsertCall struct {
 	table      *Table
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Creates a new, empty table in the dataset.
@@ -5734,9 +6069,22 @@ func (c *TablesInsertCall) Context(ctx context.Context) *TablesInsertCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TablesInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TablesInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.table)
 	if err != nil {
@@ -5838,6 +6186,7 @@ type TablesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists all tables in the specified dataset. Requires the READER
@@ -5889,9 +6238,22 @@ func (c *TablesListCall) Context(ctx context.Context) *TablesListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TablesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TablesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -6022,6 +6384,7 @@ type TablesPatchCall struct {
 	table      *Table
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Patch: Updates information in an existing table. The update method
@@ -6053,9 +6416,22 @@ func (c *TablesPatchCall) Context(ctx context.Context) *TablesPatchCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TablesPatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TablesPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.table)
 	if err != nil {
@@ -6166,6 +6542,7 @@ type TablesUpdateCall struct {
 	table      *Table
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Updates information in an existing table. The update method
@@ -6196,9 +6573,22 @@ func (c *TablesUpdateCall) Context(ctx context.Context) *TablesUpdateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TablesUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TablesUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.table)
 	if err != nil {

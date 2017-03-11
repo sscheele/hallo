@@ -17,31 +17,54 @@ package translate
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+
+	"cloud.google.com/go/internal/testutil"
 
 	"golang.org/x/net/context"
 	"golang.org/x/text/language"
-	raw "google.golang.org/api/translate/v2"
+	"google.golang.org/api/option"
+)
+
+var (
+	once    sync.Once
+	authOpt option.ClientOption
 )
 
 func initTest(ctx context.Context, t *testing.T) *Client {
 	if testing.Short() {
 		t.Skip("integration tests skipped in short mode")
 	}
-	apiKey := os.Getenv("GCLOUD_TESTS_API_KEY")
-	if apiKey == "" {
-		t.Skip("integration tests skipped: GCLOUD_TESTS_API_KEY not defined")
+	once.Do(func() { authOpt = authOption() })
+	if authOpt == nil {
+		t.Skip("Integration tests skipped. See CONTRIBUTING.md for details")
 	}
-	client, err := NewClient(ctx, apiKey)
+	client, err := NewClient(ctx, authOpt)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
 	return client
+}
+
+func authOption() option.ClientOption {
+	ts := testutil.TokenSource(context.Background(), Scope)
+	if ts != nil {
+		log.Println("authenticating via OAuth2")
+		return option.WithTokenSource(ts)
+	}
+	apiKey := os.Getenv("GCLOUD_TESTS_API_KEY")
+	if apiKey != "" {
+		log.Println("authenticating with API key")
+		return option.WithAPIKey(apiKey)
+	}
+	return nil
 }
 
 type fakeTransport struct {
@@ -61,18 +84,11 @@ func TestTranslateURL(t *testing.T) {
 	// The translate API has all inputs in the URL.
 	// Make sure we generate the right one.
 	ctx := context.Background()
-
-	c, err := NewClient(ctx, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Replace HTTP client for testing.
 	ft := &fakeTransport{}
-	c.raw, err = raw.New(&http.Client{Transport: ft})
+	c, err := NewClient(ctx, option.WithHTTPClient(&http.Client{Transport: ft}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	const urlPrefix = "https://www.googleapis.com/language/translate/v2?alt=json&"
 	for _, test := range []struct {
 		target language.Tag
 		inputs []string
@@ -189,6 +205,28 @@ func TestTranslateOneInput(t *testing.T) {
 		if got, want := tr.Text, htmlify(test.output); got != want {
 			t.Errorf("html: got %q, want %q", got, want)
 		}
+	}
+}
+
+// This tests the beta "nmt" model.
+func TestTranslateModel(t *testing.T) {
+	ctx := context.Background()
+	c := initTest(ctx, t)
+	defer c.Close()
+
+	trs, err := c.Translate(ctx, []string{"Hello"}, language.French, &Options{Model: "nmt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trs) != 1 {
+		t.Fatalf("wanted one Translation, got %d", len(trs))
+	}
+	tr := trs[0]
+	if got, want := tr.Text, "Bonjour"; got != want {
+		t.Errorf("text: got %q, want %q", got, want)
+	}
+	if got, want := tr.Model, "nmt"; got != want {
+		t.Errorf("model: got %q, want %q", got, want)
 	}
 }
 

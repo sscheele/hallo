@@ -20,39 +20,47 @@ package translate
 
 import (
 	"fmt"
-	"net/http"
 
+	"google.golang.org/api/option"
+	"google.golang.org/api/transport"
+
+	raw "cloud.google.com/go/translate/internal/translate/v2"
 	"golang.org/x/net/context"
 	"golang.org/x/text/language"
-	gtransport "google.golang.org/api/googleapi/transport"
-	raw "google.golang.org/api/translate/v2"
 )
 
-const userAgent = "gcloud-golang-translate/20161029"
+const userAgent = "gcloud-golang-translate/20161115"
+
+// Scope is the OAuth2 scope required by the Google Cloud Vision API.
+const Scope = raw.CloudPlatformScope
 
 // Client is a client for the translate API.
 type Client struct {
 	raw *raw.Service
 }
 
+const prodAddr = "https://translation.googleapis.com/language/translate/"
+
 // NewClient constructs a new Client that can perform Translate operations.
 //
 // You can find or create API key for your project from the Credentials page of
 // the Developers Console (console.developers.google.com).
-func NewClient(ctx context.Context, apiKey string) (*Client, error) {
-	// Construct a special HTTP client that understands API keys. We don't
-	// need OAuth2 support.
-	hc := &http.Client{
-		Transport: &gtransport.APIKey{
-			Key:       apiKey,
-			Transport: http.DefaultTransport,
-		},
+func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
+	o := []option.ClientOption{
+		option.WithEndpoint(prodAddr),
+		option.WithScopes(Scope),
+		option.WithUserAgent(userAgent),
 	}
-	rawService, err := raw.New(hc)
+	o = append(o, opts...)
+	httpClient, endpoint, err := transport.NewHTTPClient(ctx, o...)
+	if err != nil {
+		return nil, fmt.Errorf("dialing: %v", err)
+	}
+	rawService, err := raw.New(httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("translate client: %v", err)
 	}
-	rawService.UserAgent = userAgent
+	rawService.BasePath = endpoint
 	return &Client{raw: rawService}, nil
 }
 
@@ -77,7 +85,10 @@ func (c *Client) Translate(ctx context.Context, inputs []string, target language
 			call.Source(s.String())
 		}
 		if f := opts.Format; f != "" {
-			call.Format(f)
+			call.Format(string(f))
+		}
+		if m := opts.Model; m != "" {
+			call.Model(m)
 		}
 	}
 	res, err := call.Do()
@@ -96,6 +107,7 @@ func (c *Client) Translate(ctx context.Context, inputs []string, target language
 		ts = append(ts, Translation{
 			Text:   t.TranslatedText,
 			Source: source,
+			Model:  t.Model,
 		})
 	}
 	return ts, nil
@@ -110,13 +122,20 @@ type Options struct {
 
 	// Format describes the format of the input texts. The choices are HTML or
 	// Text. The default is HTML.
-	Format string
+	Format Format
+
+	// The model to use for translation. The choices are "nmt" or "base". The
+	// default is "base".
+	Model string
 }
+
+// The format of the input text. Used in Options.Format.
+type Format string
 
 // Constants for Options.Format.
 const (
-	HTML string = "html"
-	Text string = "text"
+	HTML Format = "html"
+	Text Format = "text"
 )
 
 // A Translation contains the results of translating a piece of text.
@@ -128,6 +147,10 @@ type Translation struct {
 	// not supplied to Client.Translate. If source was supplied, this field
 	// will be empty.
 	Source language.Tag
+
+	// Model is the model that was used for translation.
+	// It may not match the model provided as an option to Client.Translate.
+	Model string
 }
 
 // DetectLanguage attempts to determine the language of the inputs. Each input

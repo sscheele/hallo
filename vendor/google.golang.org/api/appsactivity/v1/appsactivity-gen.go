@@ -1,4 +1,4 @@
-// Package appsactivity provides access to the Google Apps Activity API.
+// Package appsactivity provides access to the G Suite Activity API.
 //
 // See https://developers.google.com/google-apps/activity/
 //
@@ -47,7 +47,7 @@ const basePath = "https://www.googleapis.com/appsactivity/v1/"
 
 // OAuth2 scopes used by this API.
 const (
-	// View the activity history of your Google Apps
+	// View the activity history of your Google apps
 	ActivityScope = "https://www.googleapis.com/auth/activity"
 
 	// View and manage the files in your Google Drive
@@ -73,9 +73,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Activities *ActivitiesService
 }
@@ -85,6 +86,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewActivitiesService(s *Service) *ActivitiesService {
@@ -520,6 +525,9 @@ type User struct {
 	// deleted. If true, name, photo and permission_id will be omitted.
 	IsDeleted bool `json:"isDeleted,omitempty"`
 
+	// IsMe: Whether the user is the authenticated user.
+	IsMe bool `json:"isMe,omitempty"`
+
 	// Name: The displayable name of the user.
 	Name string `json:"name,omitempty"`
 
@@ -562,6 +570,7 @@ type ActivitiesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of activities visible to the current logged in
@@ -659,9 +668,22 @@ func (c *ActivitiesListCall) Context(ctx context.Context) *ActivitiesListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ActivitiesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ActivitiesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}

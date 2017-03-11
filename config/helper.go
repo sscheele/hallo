@@ -1,8 +1,6 @@
 package config
 
-import (
-	"github.com/BurntSushi/toml"
-)
+import "github.com/BurntSushi/toml"
 
 //Cfg contains the current configuration
 var Cfg Config

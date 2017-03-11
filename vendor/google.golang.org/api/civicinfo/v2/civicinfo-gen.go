@@ -57,9 +57,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Divisions *DivisionsService
 
@@ -73,6 +74,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewDivisionsService(s *Service) *DivisionsService {
@@ -1008,6 +1013,92 @@ func (s *PollingLocation) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type PostalAddress struct {
+	AddressLines []string `json:"addressLines,omitempty"`
+
+	AdministrativeAreaName string `json:"administrativeAreaName,omitempty"`
+
+	CountryName string `json:"countryName,omitempty"`
+
+	CountryNameCode string `json:"countryNameCode,omitempty"`
+
+	DependentLocalityName string `json:"dependentLocalityName,omitempty"`
+
+	DependentThoroughfareLeadingType string `json:"dependentThoroughfareLeadingType,omitempty"`
+
+	DependentThoroughfareName string `json:"dependentThoroughfareName,omitempty"`
+
+	DependentThoroughfarePostDirection string `json:"dependentThoroughfarePostDirection,omitempty"`
+
+	DependentThoroughfarePreDirection string `json:"dependentThoroughfarePreDirection,omitempty"`
+
+	DependentThoroughfareTrailingType string `json:"dependentThoroughfareTrailingType,omitempty"`
+
+	DependentThoroughfaresConnector string `json:"dependentThoroughfaresConnector,omitempty"`
+
+	DependentThoroughfaresIndicator string `json:"dependentThoroughfaresIndicator,omitempty"`
+
+	DependentThoroughfaresType string `json:"dependentThoroughfaresType,omitempty"`
+
+	FirmName string `json:"firmName,omitempty"`
+
+	IsDisputed bool `json:"isDisputed,omitempty"`
+
+	LanguageCode string `json:"languageCode,omitempty"`
+
+	LocalityName string `json:"localityName,omitempty"`
+
+	PostBoxNumber string `json:"postBoxNumber,omitempty"`
+
+	PostalCodeNumber string `json:"postalCodeNumber,omitempty"`
+
+	PostalCodeNumberExtension string `json:"postalCodeNumberExtension,omitempty"`
+
+	PremiseName string `json:"premiseName,omitempty"`
+
+	RecipientName string `json:"recipientName,omitempty"`
+
+	SortingCode string `json:"sortingCode,omitempty"`
+
+	SubAdministrativeAreaName string `json:"subAdministrativeAreaName,omitempty"`
+
+	SubPremiseName string `json:"subPremiseName,omitempty"`
+
+	ThoroughfareLeadingType string `json:"thoroughfareLeadingType,omitempty"`
+
+	ThoroughfareName string `json:"thoroughfareName,omitempty"`
+
+	ThoroughfareNumber string `json:"thoroughfareNumber,omitempty"`
+
+	ThoroughfarePostDirection string `json:"thoroughfarePostDirection,omitempty"`
+
+	ThoroughfarePreDirection string `json:"thoroughfarePreDirection,omitempty"`
+
+	ThoroughfareTrailingType string `json:"thoroughfareTrailingType,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AddressLines") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AddressLines") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *PostalAddress) MarshalJSON() ([]byte, error) {
+	type noMethod PostalAddress
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 type RepresentativeInfoData struct {
 	// Divisions: Political geographic divisions that contain the requested
 	// address.
@@ -1207,6 +1298,8 @@ func (s *Source) MarshalJSON() ([]byte, error) {
 type VoterInfoRequest struct {
 	ContextParams *ContextParams `json:"contextParams,omitempty"`
 
+	VoterInfoSegmentResult *VoterInfoSegmentResult `json:"voterInfoSegmentResult,omitempty"`
+
 	// ForceSendFields is a list of field names (e.g. "ContextParams") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
@@ -1303,6 +1396,39 @@ func (s *VoterInfoResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type VoterInfoSegmentResult struct {
+	GeneratedMillis int64 `json:"generatedMillis,omitempty,string"`
+
+	PostalAddress *PostalAddress `json:"postalAddress,omitempty"`
+
+	Request *VoterInfoRequest `json:"request,omitempty"`
+
+	Response *VoterInfoResponse `json:"response,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "GeneratedMillis") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "GeneratedMillis") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *VoterInfoSegmentResult) MarshalJSON() ([]byte, error) {
+	type noMethod VoterInfoSegmentResult
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // method id "civicinfo.divisions.search":
 
 type DivisionsSearchCall struct {
@@ -1311,6 +1437,7 @@ type DivisionsSearchCall struct {
 	urlParams_            gensupport.URLParams
 	ifNoneMatch_          string
 	ctx_                  context.Context
+	header_               http.Header
 }
 
 // Search: Searches for political divisions by their natural name or OCD
@@ -1358,9 +1485,22 @@ func (c *DivisionsSearchCall) Context(ctx context.Context) *DivisionsSearchCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *DivisionsSearchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *DivisionsSearchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1440,6 +1580,7 @@ type ElectionsElectionQueryCall struct {
 	urlParams_            gensupport.URLParams
 	ifNoneMatch_          string
 	ctx_                  context.Context
+	header_               http.Header
 }
 
 // ElectionQuery: List of available elections to query.
@@ -1475,9 +1616,22 @@ func (c *ElectionsElectionQueryCall) Context(ctx context.Context) *ElectionsElec
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ElectionsElectionQueryCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ElectionsElectionQueryCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1550,6 +1704,7 @@ type ElectionsVoterInfoQueryCall struct {
 	urlParams_       gensupport.URLParams
 	ifNoneMatch_     string
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // VoterInfoQuery: Looks up information relevant to a voter based on the
@@ -1612,9 +1767,22 @@ func (c *ElectionsVoterInfoQueryCall) Context(ctx context.Context) *ElectionsVot
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ElectionsVoterInfoQueryCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ElectionsVoterInfoQueryCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1717,6 +1885,7 @@ type RepresentativesRepresentativeInfoByAddressCall struct {
 	urlParams_                gensupport.URLParams
 	ifNoneMatch_              string
 	ctx_                      context.Context
+	header_                   http.Header
 }
 
 // RepresentativeInfoByAddress: Looks up political geography and
@@ -1810,9 +1979,22 @@ func (c *RepresentativesRepresentativeInfoByAddressCall) Context(ctx context.Con
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RepresentativesRepresentativeInfoByAddressCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RepresentativesRepresentativeInfoByAddressCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1959,6 +2141,7 @@ type RepresentativesRepresentativeInfoByDivisionCall struct {
 	urlParams_                        gensupport.URLParams
 	ifNoneMatch_                      string
 	ctx_                              context.Context
+	header_                           http.Header
 }
 
 // RepresentativeInfoByDivision: Looks up representative information for
@@ -2048,9 +2231,22 @@ func (c *RepresentativesRepresentativeInfoByDivisionCall) Context(ctx context.Co
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RepresentativesRepresentativeInfoByDivisionCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RepresentativesRepresentativeInfoByDivisionCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}

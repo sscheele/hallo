@@ -47,6 +47,9 @@ const basePath = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
 
 // OAuth2 scopes used by this API.
 const (
+	// View and manage your data across Google Cloud Platform services
+	CloudPlatformScope = "https://www.googleapis.com/auth/cloud-platform"
+
 	// View and administer all your Firebase data and settings
 	FirebaseScope = "https://www.googleapis.com/auth/firebase"
 )
@@ -61,9 +64,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Relyingparty *RelyingpartyService
 }
@@ -73,6 +77,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewRelyingpartyService(s *Service) *RelyingpartyService {
@@ -174,7 +182,7 @@ func (s *DeleteAccountResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// DownloadAccountResponse: Respone of downloading accounts in batch.
+// DownloadAccountResponse: Response of downloading accounts in batch.
 type DownloadAccountResponse struct {
 	// Kind: The fixed string "identitytoolkit#DownloadAccountResponse".
 	Kind string `json:"kind,omitempty"`
@@ -504,6 +512,10 @@ type IdentitytoolkitRelyingpartyDownloadAccountRequest struct {
 	// the previous response.
 	NextPageToken string `json:"nextPageToken,omitempty"`
 
+	// TargetProjectId: Specify which project (field value is actually
+	// project id) to operate. Only used when provided credential.
+	TargetProjectId string `json:"targetProjectId,omitempty"`
+
 	// ForceSendFields is a list of field names (e.g.
 	// "DelegatedProjectNumber") to unconditionally include in API requests.
 	// By default, fields with empty values are omitted from API requests.
@@ -584,6 +596,8 @@ type IdentitytoolkitRelyingpartyGetProjectConfigResponse struct {
 
 	// ChangeEmailTemplate: Change email template.
 	ChangeEmailTemplate *EmailTemplate `json:"changeEmailTemplate,omitempty"`
+
+	DynamicLinksDomain string `json:"dynamicLinksDomain,omitempty"`
 
 	// EnableAnonymousUser: Whether anonymous user is enabled.
 	EnableAnonymousUser bool `json:"enableAnonymousUser,omitempty"`
@@ -932,11 +946,19 @@ type IdentitytoolkitRelyingpartySignupNewUserRequest struct {
 	// CaptchaResponse: Response to the captcha.
 	CaptchaResponse string `json:"captchaResponse,omitempty"`
 
+	// Disabled: Whether to disable the user. Only can be used by service
+	// account.
+	Disabled bool `json:"disabled,omitempty"`
+
 	// DisplayName: The name of the user.
 	DisplayName string `json:"displayName,omitempty"`
 
 	// Email: The email of the user.
 	Email string `json:"email,omitempty"`
+
+	// EmailVerified: Mark the email as verified or not. Only can be used by
+	// service account.
+	EmailVerified bool `json:"emailVerified,omitempty"`
 
 	// IdToken: The GITKit token of the authenticated user.
 	IdToken string `json:"idToken,omitempty"`
@@ -944,8 +966,14 @@ type IdentitytoolkitRelyingpartySignupNewUserRequest struct {
 	// InstanceId: Instance id token of the app.
 	InstanceId string `json:"instanceId,omitempty"`
 
+	// LocalId: Privileged caller can create user with specified user id.
+	LocalId string `json:"localId,omitempty"`
+
 	// Password: The new password of the user.
 	Password string `json:"password,omitempty"`
+
+	// PhotoUrl: The photo url of the user.
+	PhotoUrl string `json:"photoUrl,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "CaptchaChallenge") to
 	// unconditionally include in API requests. By default, fields with
@@ -974,6 +1002,10 @@ func (s *IdentitytoolkitRelyingpartySignupNewUserRequest) MarshalJSON() ([]byte,
 // IdentitytoolkitRelyingpartyUploadAccountRequest: Request to upload
 // user account in batch.
 type IdentitytoolkitRelyingpartyUploadAccountRequest struct {
+	// AllowOverwrite: Whether allow overwrite existing account when user
+	// local_id exists.
+	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
+
 	// DelegatedProjectNumber: GCP project number of the requesting
 	// delegated app. Currently only intended for Firebase V1 migration.
 	DelegatedProjectNumber int64 `json:"delegatedProjectNumber,omitempty,string"`
@@ -1006,19 +1038,18 @@ type IdentitytoolkitRelyingpartyUploadAccountRequest struct {
 	// Users: The account info to be stored.
 	Users []*UserInfo `json:"users,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g.
-	// "DelegatedProjectNumber") to unconditionally include in API requests.
-	// By default, fields with empty values are omitted from API requests.
-	// However, any non-pointer, non-interface field appearing in
-	// ForceSendFields will be sent to the server regardless of whether the
-	// field is empty or not. This may be used to include empty fields in
-	// Patch requests.
+	// ForceSendFields is a list of field names (e.g. "AllowOverwrite") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "DelegatedProjectNumber")
-	// to include in API requests with the JSON null value. By default,
-	// fields with empty values are omitted from API requests. However, any
-	// field with an empty value appearing in NullFields will be sent to the
+	// NullFields is a list of field names (e.g. "AllowOverwrite") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
 	// server as null. It is an error if a field in this list has a
 	// non-empty value. This may be used to include null fields in Patch
 	// requests.
@@ -1339,6 +1370,9 @@ type SetAccountInfoResponse struct {
 	// Email: The email of the user.
 	Email string `json:"email,omitempty"`
 
+	// EmailVerified: If email has been verified.
+	EmailVerified bool `json:"emailVerified,omitempty"`
+
 	// ExpiresIn: If idToken is STS id token, then this field will be
 	// expiration time of STS id token in seconds.
 	ExpiresIn int64 `json:"expiresIn,omitempty,string"`
@@ -1589,6 +1623,9 @@ type UserInfo struct {
 	// ProviderUserInfo: The IDP of the user.
 	ProviderUserInfo []*UserInfoProviderUserInfo `json:"providerUserInfo,omitempty"`
 
+	// RawPassword: The user's plain text password.
+	RawPassword string `json:"rawPassword,omitempty"`
+
 	// Salt: The user's password salt.
 	Salt string `json:"salt,omitempty"`
 
@@ -1624,6 +1661,20 @@ func (s *UserInfo) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+func (s *UserInfo) UnmarshalJSON(data []byte) error {
+	type noMethod UserInfo
+	var s1 struct {
+		PasswordUpdatedAt gensupport.JSONFloat64 `json:"passwordUpdatedAt"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.PasswordUpdatedAt = float64(s1.PasswordUpdatedAt)
+	return nil
+}
+
 type UserInfoProviderUserInfo struct {
 	// DisplayName: The user's display name at the IDP.
 	DisplayName string `json:"displayName,omitempty"`
@@ -1644,9 +1695,6 @@ type UserInfoProviderUserInfo struct {
 
 	// RawId: User's raw identifier directly returned from IDP.
 	RawId string `json:"rawId,omitempty"`
-
-	// RawUserInfo: Raw IDP-returned user info.
-	RawUserInfo string `json:"rawUserInfo,omitempty"`
 
 	// ScreenName: User's screen name at Twitter or login name at Github.
 	ScreenName string `json:"screenName,omitempty"`
@@ -1729,6 +1777,10 @@ type VerifyAssertionResponse struct {
 	// the identifier is an email. It can be used to check whether the user
 	// input email is different from the asserted email.
 	InputEmail string `json:"inputEmail,omitempty"`
+
+	// IsNewUser: True if it's a new user sign-in, false if it's a returning
+	// user.
+	IsNewUser bool `json:"isNewUser,omitempty"`
 
 	// Kind: The fixed string "identitytoolkit#VerifyAssertionResponse".
 	Kind string `json:"kind,omitempty"`
@@ -1955,6 +2007,7 @@ type RelyingpartyCreateAuthUriCall struct {
 	identitytoolkitrelyingpartycreateauthurirequest *IdentitytoolkitRelyingpartyCreateAuthUriRequest
 	urlParams_                                      gensupport.URLParams
 	ctx_                                            context.Context
+	header_                                         http.Header
 }
 
 // CreateAuthUri: Creates the URI used by the IdP to authenticate the
@@ -1981,9 +2034,22 @@ func (c *RelyingpartyCreateAuthUriCall) Context(ctx context.Context) *Relyingpar
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyCreateAuthUriCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyCreateAuthUriCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartycreateauthurirequest)
 	if err != nil {
@@ -2045,7 +2111,10 @@ func (c *RelyingpartyCreateAuthUriCall) Do(opts ...googleapi.CallOption) (*Creat
 	//   },
 	//   "response": {
 	//     "$ref": "CreateAuthUriResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2057,6 +2126,7 @@ type RelyingpartyDeleteAccountCall struct {
 	identitytoolkitrelyingpartydeleteaccountrequest *IdentitytoolkitRelyingpartyDeleteAccountRequest
 	urlParams_                                      gensupport.URLParams
 	ctx_                                            context.Context
+	header_                                         http.Header
 }
 
 // DeleteAccount: Delete user account.
@@ -2082,9 +2152,22 @@ func (c *RelyingpartyDeleteAccountCall) Context(ctx context.Context) *Relyingpar
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyDeleteAccountCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyDeleteAccountCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartydeleteaccountrequest)
 	if err != nil {
@@ -2146,7 +2229,10 @@ func (c *RelyingpartyDeleteAccountCall) Do(opts ...googleapi.CallOption) (*Delet
 	//   },
 	//   "response": {
 	//     "$ref": "DeleteAccountResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2158,6 +2244,7 @@ type RelyingpartyDownloadAccountCall struct {
 	identitytoolkitrelyingpartydownloadaccountrequest *IdentitytoolkitRelyingpartyDownloadAccountRequest
 	urlParams_                                        gensupport.URLParams
 	ctx_                                              context.Context
+	header_                                           http.Header
 }
 
 // DownloadAccount: Batch download user accounts.
@@ -2183,9 +2270,22 @@ func (c *RelyingpartyDownloadAccountCall) Context(ctx context.Context) *Relyingp
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyDownloadAccountCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyDownloadAccountCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartydownloadaccountrequest)
 	if err != nil {
@@ -2249,10 +2349,32 @@ func (c *RelyingpartyDownloadAccountCall) Do(opts ...googleapi.CallOption) (*Dow
 	//     "$ref": "DownloadAccountResponse"
 	//   },
 	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
 	//     "https://www.googleapis.com/auth/firebase"
 	//   ]
 	// }
 
+}
+
+// Pages invokes f for each page of results.
+// A non-nil error returned from f will halt the iteration.
+// The provided context supersedes any context provided to the Context method.
+func (c *RelyingpartyDownloadAccountCall) Pages(ctx context.Context, f func(*DownloadAccountResponse) error) error {
+	c.ctx_ = ctx
+	defer func(pt string) { c.identitytoolkitrelyingpartydownloadaccountrequest.NextPageToken = pt }(c.identitytoolkitrelyingpartydownloadaccountrequest.NextPageToken) // reset paging to original point
+	for {
+		x, err := c.Do()
+		if err != nil {
+			return err
+		}
+		if err := f(x); err != nil {
+			return err
+		}
+		if x.NextPageToken == "" {
+			return nil
+		}
+		c.identitytoolkitrelyingpartydownloadaccountrequest.NextPageToken = x.NextPageToken
+	}
 }
 
 // method id "identitytoolkit.relyingparty.getAccountInfo":
@@ -2262,6 +2384,7 @@ type RelyingpartyGetAccountInfoCall struct {
 	identitytoolkitrelyingpartygetaccountinforequest *IdentitytoolkitRelyingpartyGetAccountInfoRequest
 	urlParams_                                       gensupport.URLParams
 	ctx_                                             context.Context
+	header_                                          http.Header
 }
 
 // GetAccountInfo: Returns the account info.
@@ -2287,9 +2410,22 @@ func (c *RelyingpartyGetAccountInfoCall) Context(ctx context.Context) *Relyingpa
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyGetAccountInfoCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyGetAccountInfoCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartygetaccountinforequest)
 	if err != nil {
@@ -2351,7 +2487,10 @@ func (c *RelyingpartyGetAccountInfoCall) Do(opts ...googleapi.CallOption) (*GetA
 	//   },
 	//   "response": {
 	//     "$ref": "GetAccountInfoResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2363,6 +2502,7 @@ type RelyingpartyGetOobConfirmationCodeCall struct {
 	relyingparty *Relyingparty
 	urlParams_   gensupport.URLParams
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetOobConfirmationCode: Get a code for user action confirmation.
@@ -2388,9 +2528,22 @@ func (c *RelyingpartyGetOobConfirmationCodeCall) Context(ctx context.Context) *R
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyGetOobConfirmationCodeCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyGetOobConfirmationCodeCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.relyingparty)
 	if err != nil {
@@ -2452,7 +2605,10 @@ func (c *RelyingpartyGetOobConfirmationCodeCall) Do(opts ...googleapi.CallOption
 	//   },
 	//   "response": {
 	//     "$ref": "GetOobConfirmationCodeResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2464,6 +2620,7 @@ type RelyingpartyGetProjectConfigCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetProjectConfig: Get project configuration.
@@ -2513,9 +2670,22 @@ func (c *RelyingpartyGetProjectConfigCall) Context(ctx context.Context) *Relying
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyGetProjectConfigCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyGetProjectConfigCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2586,7 +2756,10 @@ func (c *RelyingpartyGetProjectConfigCall) Do(opts ...googleapi.CallOption) (*Id
 	//   "path": "getProjectConfig",
 	//   "response": {
 	//     "$ref": "IdentitytoolkitRelyingpartyGetProjectConfigResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2598,6 +2771,7 @@ type RelyingpartyGetPublicKeysCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetPublicKeys: Get token signing public key.
@@ -2632,9 +2806,22 @@ func (c *RelyingpartyGetPublicKeysCall) Context(ctx context.Context) *Relyingpar
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyGetPublicKeysCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyGetPublicKeysCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2671,7 +2858,10 @@ func (c *RelyingpartyGetPublicKeysCall) Do(opts ...googleapi.CallOption) (map[st
 	//   "path": "publicKeys",
 	//   "response": {
 	//     "$ref": "IdentitytoolkitRelyingpartyGetPublicKeysResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2683,6 +2873,7 @@ type RelyingpartyGetRecaptchaParamCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetRecaptchaParam: Get recaptcha secure param.
@@ -2717,9 +2908,22 @@ func (c *RelyingpartyGetRecaptchaParamCall) Context(ctx context.Context) *Relyin
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyGetRecaptchaParamCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyGetRecaptchaParamCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2776,7 +2980,10 @@ func (c *RelyingpartyGetRecaptchaParamCall) Do(opts ...googleapi.CallOption) (*G
 	//   "path": "getRecaptchaParam",
 	//   "response": {
 	//     "$ref": "GetRecaptchaParamResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2788,6 +2995,7 @@ type RelyingpartyResetPasswordCall struct {
 	identitytoolkitrelyingpartyresetpasswordrequest *IdentitytoolkitRelyingpartyResetPasswordRequest
 	urlParams_                                      gensupport.URLParams
 	ctx_                                            context.Context
+	header_                                         http.Header
 }
 
 // ResetPassword: Reset password for a user.
@@ -2813,9 +3021,22 @@ func (c *RelyingpartyResetPasswordCall) Context(ctx context.Context) *Relyingpar
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyResetPasswordCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyResetPasswordCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartyresetpasswordrequest)
 	if err != nil {
@@ -2877,7 +3098,10 @@ func (c *RelyingpartyResetPasswordCall) Do(opts ...googleapi.CallOption) (*Reset
 	//   },
 	//   "response": {
 	//     "$ref": "ResetPasswordResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2889,6 +3113,7 @@ type RelyingpartySetAccountInfoCall struct {
 	identitytoolkitrelyingpartysetaccountinforequest *IdentitytoolkitRelyingpartySetAccountInfoRequest
 	urlParams_                                       gensupport.URLParams
 	ctx_                                             context.Context
+	header_                                          http.Header
 }
 
 // SetAccountInfo: Set account info for a user.
@@ -2914,9 +3139,22 @@ func (c *RelyingpartySetAccountInfoCall) Context(ctx context.Context) *Relyingpa
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartySetAccountInfoCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartySetAccountInfoCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartysetaccountinforequest)
 	if err != nil {
@@ -2978,7 +3216,10 @@ func (c *RelyingpartySetAccountInfoCall) Do(opts ...googleapi.CallOption) (*SetA
 	//   },
 	//   "response": {
 	//     "$ref": "SetAccountInfoResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -2990,6 +3231,7 @@ type RelyingpartySetProjectConfigCall struct {
 	identitytoolkitrelyingpartysetprojectconfigrequest *IdentitytoolkitRelyingpartySetProjectConfigRequest
 	urlParams_                                         gensupport.URLParams
 	ctx_                                               context.Context
+	header_                                            http.Header
 }
 
 // SetProjectConfig: Set project configuration.
@@ -3015,9 +3257,22 @@ func (c *RelyingpartySetProjectConfigCall) Context(ctx context.Context) *Relying
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartySetProjectConfigCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartySetProjectConfigCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartysetprojectconfigrequest)
 	if err != nil {
@@ -3081,7 +3336,10 @@ func (c *RelyingpartySetProjectConfigCall) Do(opts ...googleapi.CallOption) (*Id
 	//   },
 	//   "response": {
 	//     "$ref": "IdentitytoolkitRelyingpartySetProjectConfigResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -3093,6 +3351,7 @@ type RelyingpartySignOutUserCall struct {
 	identitytoolkitrelyingpartysignoutuserrequest *IdentitytoolkitRelyingpartySignOutUserRequest
 	urlParams_                                    gensupport.URLParams
 	ctx_                                          context.Context
+	header_                                       http.Header
 }
 
 // SignOutUser: Sign out user.
@@ -3118,9 +3377,22 @@ func (c *RelyingpartySignOutUserCall) Context(ctx context.Context) *Relyingparty
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartySignOutUserCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartySignOutUserCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartysignoutuserrequest)
 	if err != nil {
@@ -3184,7 +3456,10 @@ func (c *RelyingpartySignOutUserCall) Do(opts ...googleapi.CallOption) (*Identit
 	//   },
 	//   "response": {
 	//     "$ref": "IdentitytoolkitRelyingpartySignOutUserResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -3196,6 +3471,7 @@ type RelyingpartySignupNewUserCall struct {
 	identitytoolkitrelyingpartysignupnewuserrequest *IdentitytoolkitRelyingpartySignupNewUserRequest
 	urlParams_                                      gensupport.URLParams
 	ctx_                                            context.Context
+	header_                                         http.Header
 }
 
 // SignupNewUser: Signup new user.
@@ -3221,9 +3497,22 @@ func (c *RelyingpartySignupNewUserCall) Context(ctx context.Context) *Relyingpar
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartySignupNewUserCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartySignupNewUserCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartysignupnewuserrequest)
 	if err != nil {
@@ -3285,7 +3574,10 @@ func (c *RelyingpartySignupNewUserCall) Do(opts ...googleapi.CallOption) (*Signu
 	//   },
 	//   "response": {
 	//     "$ref": "SignupNewUserResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -3297,6 +3589,7 @@ type RelyingpartyUploadAccountCall struct {
 	identitytoolkitrelyingpartyuploadaccountrequest *IdentitytoolkitRelyingpartyUploadAccountRequest
 	urlParams_                                      gensupport.URLParams
 	ctx_                                            context.Context
+	header_                                         http.Header
 }
 
 // UploadAccount: Batch upload existing user accounts.
@@ -3322,9 +3615,22 @@ func (c *RelyingpartyUploadAccountCall) Context(ctx context.Context) *Relyingpar
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyUploadAccountCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyUploadAccountCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartyuploadaccountrequest)
 	if err != nil {
@@ -3388,6 +3694,7 @@ func (c *RelyingpartyUploadAccountCall) Do(opts ...googleapi.CallOption) (*Uploa
 	//     "$ref": "UploadAccountResponse"
 	//   },
 	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
 	//     "https://www.googleapis.com/auth/firebase"
 	//   ]
 	// }
@@ -3401,6 +3708,7 @@ type RelyingpartyVerifyAssertionCall struct {
 	identitytoolkitrelyingpartyverifyassertionrequest *IdentitytoolkitRelyingpartyVerifyAssertionRequest
 	urlParams_                                        gensupport.URLParams
 	ctx_                                              context.Context
+	header_                                           http.Header
 }
 
 // VerifyAssertion: Verifies the assertion returned by the IdP.
@@ -3426,9 +3734,22 @@ func (c *RelyingpartyVerifyAssertionCall) Context(ctx context.Context) *Relyingp
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyVerifyAssertionCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyVerifyAssertionCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartyverifyassertionrequest)
 	if err != nil {
@@ -3490,7 +3811,10 @@ func (c *RelyingpartyVerifyAssertionCall) Do(opts ...googleapi.CallOption) (*Ver
 	//   },
 	//   "response": {
 	//     "$ref": "VerifyAssertionResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -3502,6 +3826,7 @@ type RelyingpartyVerifyCustomTokenCall struct {
 	identitytoolkitrelyingpartyverifycustomtokenrequest *IdentitytoolkitRelyingpartyVerifyCustomTokenRequest
 	urlParams_                                          gensupport.URLParams
 	ctx_                                                context.Context
+	header_                                             http.Header
 }
 
 // VerifyCustomToken: Verifies the developer asserted ID token.
@@ -3527,9 +3852,22 @@ func (c *RelyingpartyVerifyCustomTokenCall) Context(ctx context.Context) *Relyin
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyVerifyCustomTokenCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyVerifyCustomTokenCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartyverifycustomtokenrequest)
 	if err != nil {
@@ -3591,7 +3929,10 @@ func (c *RelyingpartyVerifyCustomTokenCall) Do(opts ...googleapi.CallOption) (*V
 	//   },
 	//   "response": {
 	//     "$ref": "VerifyCustomTokenResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }
@@ -3603,6 +3944,7 @@ type RelyingpartyVerifyPasswordCall struct {
 	identitytoolkitrelyingpartyverifypasswordrequest *IdentitytoolkitRelyingpartyVerifyPasswordRequest
 	urlParams_                                       gensupport.URLParams
 	ctx_                                             context.Context
+	header_                                          http.Header
 }
 
 // VerifyPassword: Verifies the user entered password.
@@ -3628,9 +3970,22 @@ func (c *RelyingpartyVerifyPasswordCall) Context(ctx context.Context) *Relyingpa
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RelyingpartyVerifyPasswordCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *RelyingpartyVerifyPasswordCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.identitytoolkitrelyingpartyverifypasswordrequest)
 	if err != nil {
@@ -3692,7 +4047,10 @@ func (c *RelyingpartyVerifyPasswordCall) Do(opts ...googleapi.CallOption) (*Veri
 	//   },
 	//   "response": {
 	//     "$ref": "VerifyPasswordResponse"
-	//   }
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
 	// }
 
 }

@@ -39,19 +39,20 @@ func init() {
 	flag.Parse()
 
 	config.InitToml(configFile)
+	weather.InitConfig()
 }
 
 //updateAlarmList prunes the alarm list to remove old alarms and finds the next alarm to go off
 func updateAlarmList() {
-	if len(alarmList) == 0 {
-		return
-	}
 	for i := 0; i < len(alarmList); i++ {
 		alarmList[i].NextGoesOff = alclock.NextRing(alarmList[i])
 		writeData([]string{fmt.Sprintf("Alarm:\n%v\nnext goes off on: %d", alarmList[i], alarmList[i].NextGoesOff.Unix())})
 		if alarmList[i].NextGoesOff.Before(time.Now()) {
 			alarmList = append(alarmList[:i], alarmList[i+1:]...)
 		}
+	}
+	if len(alarmList) == 0 {
+		return
 	}
 	tempMin := alarmList[0]
 	for i := 0; i < len(alarmList); i++ {
@@ -270,7 +271,7 @@ func main() {
 	var g *gocui.Gui
 	if !disableGUI {
 		var err error
-		g, err = gocui.NewGui()
+		g, err = gocui.NewGui(gocui.OutputNormal)
 		mainGUI = g
 		if err != nil {
 			return
@@ -362,8 +363,8 @@ func main() {
 			return
 		}
 	} else {
-		handleInput(`add-alarm -date=2016-*-*T*:*:00`)
-		handleInput(`add-alarm -date=2016-*-*T*:*:30`)
+		handleInput(`add-alarm -date=2017-*-*T*:*:00`)
+		handleInput(`add-alarm -date=2017-*-*T*:*:30`)
 		handleInput("list-alarms")
 		for {
 			time.Sleep(30 * time.Second)

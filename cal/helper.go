@@ -85,7 +85,6 @@ func GetEvents(f func(string) string) (retVal []Event, err error) {
 			when = when[:19] //remove time zone
 			fmt.Fscanf(strings.NewReader(when), "%s-%s-%sT%s:%s:%s", &t.Year, &t.Month, &t.Day, &t.Hour, &t.Minute, &t.Second)
 			t.IsAllDay = false
-			//fmt.Printf("Hour: %d, Minute: %d, Second: %d ", hour, minute, second)
 		} else {
 			when = i.Start.Date
 			fmt.Fscanf(strings.NewReader(when), "%s-%s-%s", &t.Year, &t.Month, &t.Day)
@@ -156,7 +155,6 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 // saveToken uses a file path to create a file and store the
 // token in it.
 func saveToken(file string, token *oauth2.Token) {
-	fmt.Printf("Saving credential file to: %s\n", file)
 	f, err := os.Create(file)
 	if err != nil {
 		log.Fatalf("Unable to cache oauth token: %v", err)

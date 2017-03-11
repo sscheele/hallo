@@ -1,71 +1,91 @@
-hash: 83317bffc53c18d773d12772e27459dba22c9f5bab977b8b8498f7526efcf2de
-updated: 2016-11-18T20:21:35.689173125-05:00
+hash: 9e59172cdad7dad56820f3e67527ed659346e5279179b3112bc3763a0a0406fe
+updated: 2017-03-10T10:52:04.459832097-05:00
 imports:
 - name: cloud.google.com/go
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: 581b8393c374fc0c5e3e91f07bc95935afb30df2
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/BurntSushi/toml
+  version: bbd5bb678321a0d6e58f1099321dfa73391c1b6f
 - name: github.com/golang/protobuf
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
   subpackages:
   - proto
+- name: github.com/googleapis/gax-go
+  version: 8c5154c0fe5bf18cf649634d4c6df50897a32751
 - name: github.com/gordonklaus/portaudio
-  version: ee87a127ce8f364049c62b5ae0bef46cc87dae3d
+  version: 2a038c93424fb36d026982db9fd365504a49f566
 - name: github.com/jroimartin/gocui
-  version: 0975ddb2a85e94dfb9fcd0b8672f4a33b960fb1f
+  version: 612b0b2987ec1a6af46d7008cef1efd4b3898346
 - name: github.com/mattn/go-runewidth
-  version: 737072b4e32b7a5018b4a7125da8d12de90e8045
+  version: 14207d285c6c197daabb5c9793d63e7af9ab2d50
 - name: github.com/mattn/go-shellwords
   version: f4e566c536cf69158e808ec28ef4182a37fdc981
 - name: github.com/mlbright/darksky
-  version: 189917cd2dbc9962e9eafabe3c1cbeeb2522d44b
+  version: b610ed3d88aad1a8e64ca6a5c272f97f64dd2d40
 - name: github.com/nsf/termbox-go
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
-- name: github.com/sscheele/hallo
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
-  subpackages:
-  - gmaps
+  version: 91bae1bb5fa9ee504905ecbe7043fa30e92feaa3
 - name: github.com/xlab/closer
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: 89cd22812c4fd5188746092cd10992caeffc75ab
 - name: github.com/xlab/pocketsphinx-go
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: 6879cfac8494a2f46e53d31efef52db717c00ff8
   subpackages:
-  - sphinx
   - pocketsphinx
+  - sphinx
 - name: github.com/xlab/portaudio-go
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: 1d1526abf2efb0c6c8fd08928aa021378b017bc8
   subpackages:
   - portaudio
 - name: golang.org/x/net
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: a6577fac2d73be281a500b310739095313165611
   subpackages:
   - context
   - context/ctxhttp
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/oauth2
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: efb10a30610e617dbb17fc243f4cc61a8cfa2903
   subpackages:
   - google
   - internal
   - jws
   - jwt
 - name: google.golang.org/api
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: 3b43c2d81369a58eed9be2154edcfb2bc749a0c1
   subpackages:
   - calendar/v3
   - gensupport
   - googleapi
   - googleapi/internal/uritemplates
 - name: google.golang.org/appengine
-  version: de95b35193e9ea2f751e9af41bf0b32e840d564b
+  version: b79c28f0197795b4050bfcd7c4c2209136c594b1
   subpackages:
-  - urlfetch
   - internal
-  - internal/urlfetch
   - internal/app_identity
-  - internal/modules
   - internal/base
   - internal/datastore
   - internal/log
+  - internal/modules
   - internal/remote_api
+  - internal/urlfetch
+  - urlfetch
+- name: google.golang.org/grpc
+  version: 4eaacfed9779ee7568c9e72e9f763dbd3af8e0b4
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - stats
+  - tap
+  - transport
 testImports: []

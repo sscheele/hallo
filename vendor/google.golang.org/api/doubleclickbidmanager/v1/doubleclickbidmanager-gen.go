@@ -58,9 +58,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Lineitems *LineitemsService
 
@@ -76,6 +77,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewLineitemsService(s *Service) *LineitemsService {
@@ -215,7 +220,7 @@ type DownloadRequest struct {
 	// FilterIds: The IDs of the specified filter type. This is used to
 	// filter entities to fetch. At least one ID must be specified. Only one
 	// ID is allowed for the ADVERTISER_ID filter type. For
-	// INSERTION_ORDER_ID or LINE_ITEM_ID filter types all IDs must be from
+	// INSERTION_ORDER_ID or LINE_ITEM_ID filter types, all IDs must be from
 	// the same Advertiser.
 	FilterIds googleapi.Int64s `json:"filterIds,omitempty"`
 
@@ -313,6 +318,7 @@ type FilterPair struct {
 	//   "FILTER_CARRIER"
 	//   "FILTER_CHANNEL_ID"
 	//   "FILTER_CITY"
+	//   "FILTER_COMPANION_CREATIVE_ID"
 	//   "FILTER_CONVERSION_DELAY"
 	//   "FILTER_COUNTRY"
 	//   "FILTER_CREATIVE_HEIGHT"
@@ -361,6 +367,7 @@ type FilterPair struct {
 	//   "FILTER_REGULAR_CHANNEL_ID"
 	//   "FILTER_SITE_ID"
 	//   "FILTER_SITE_LANGUAGE"
+	//   "FILTER_SKIPPABLE_SUPPORT"
 	//   "FILTER_TARGETED_USER_LIST"
 	//   "FILTER_TIME_OF_DAY"
 	//   "FILTER_TRUEVIEW_AD_GROUP_AD_ID"
@@ -536,6 +543,7 @@ type Parameters struct {
 	//   "FILTER_CARRIER"
 	//   "FILTER_CHANNEL_ID"
 	//   "FILTER_CITY"
+	//   "FILTER_COMPANION_CREATIVE_ID"
 	//   "FILTER_CONVERSION_DELAY"
 	//   "FILTER_COUNTRY"
 	//   "FILTER_CREATIVE_HEIGHT"
@@ -584,6 +592,7 @@ type Parameters struct {
 	//   "FILTER_REGULAR_CHANNEL_ID"
 	//   "FILTER_SITE_ID"
 	//   "FILTER_SITE_LANGUAGE"
+	//   "FILTER_SKIPPABLE_SUPPORT"
 	//   "FILTER_TARGETED_USER_LIST"
 	//   "FILTER_TIME_OF_DAY"
 	//   "FILTER_TRUEVIEW_AD_GROUP_AD_ID"
@@ -646,6 +655,7 @@ type Parameters struct {
 	// Metrics: Metrics to include as columns in your report.
 	//
 	// Possible values:
+	//   "METRIC_ACTIVE_VIEW_AUDIBLE_VISIBLE_ON_COMPLETE_IMPRESSIONS"
 	//   "METRIC_ACTIVE_VIEW_AVERAGE_VIEWABLE_TIME"
 	//   "METRIC_ACTIVE_VIEW_DISTRIBUTION_UNMEASURABLE"
 	//   "METRIC_ACTIVE_VIEW_DISTRIBUTION_UNVIEWABLE"
@@ -654,8 +664,20 @@ type Parameters struct {
 	//   "METRIC_ACTIVE_VIEW_MEASURABLE_IMPRESSIONS"
 	//   "METRIC_ACTIVE_VIEW_PCT_MEASURABLE_IMPRESSIONS"
 	//   "METRIC_ACTIVE_VIEW_PCT_VIEWABLE_IMPRESSIONS"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_AT_START"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_FIRST_QUAR"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_ON_COMPLETE"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_SECOND_QUAR"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_THIRD_QUAR"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_VIEWABLE_FOR_TIME_THRESHOLD"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_VISIBLE_AT_START"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_VISIBLE_FIRST_QUAR"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_VISIBLE_ON_COMPLETE"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_VISIBLE_SECOND_QUAR"
+	//   "METRIC_ACTIVE_VIEW_PERCENT_VISIBLE_THIRD_QUAR"
 	//   "METRIC_ACTIVE_VIEW_UNMEASURABLE_IMPRESSIONS"
 	//   "METRIC_ACTIVE_VIEW_UNVIEWABLE_IMPRESSIONS"
+	//   "METRIC_ACTIVE_VIEW_VIEWABLE_FOR_TIME_THRESHOLD"
 	//   "METRIC_ACTIVE_VIEW_VIEWABLE_IMPRESSIONS"
 	//   "METRIC_BID_REQUESTS"
 	//   "METRIC_BILLABLE_COST_ADVERTISER"
@@ -842,6 +864,7 @@ type Parameters struct {
 	//   "METRIC_REVENUE_ECPC_ADVERTISER"
 	//   "METRIC_REVENUE_ECPC_PARTNER"
 	//   "METRIC_REVENUE_ECPC_USD"
+	//   "METRIC_REVENUE_ECPIAVC_ADVERTISER"
 	//   "METRIC_REVENUE_ECPM_ADVERTISER"
 	//   "METRIC_REVENUE_ECPM_PARTNER"
 	//   "METRIC_REVENUE_ECPM_USD"
@@ -965,6 +988,7 @@ type Parameters struct {
 	//   "TYPE_PETRA_NIELSEN_ONLINE_GLOBAL_MARKET"
 	//   "TYPE_PIXEL_LOAD"
 	//   "TYPE_REACH_AND_FREQUENCY"
+	//   "TYPE_REACH_AUDIENCE"
 	//   "TYPE_THIRD_PARTY_DATA_PROVIDER"
 	//   "TYPE_TRUEVIEW"
 	//   "TYPE_TRUEVIEW_IAR"
@@ -1618,6 +1642,7 @@ type LineitemsDownloadlineitemsCall struct {
 	downloadlineitemsrequest *DownloadLineItemsRequest
 	urlParams_               gensupport.URLParams
 	ctx_                     context.Context
+	header_                  http.Header
 }
 
 // Downloadlineitems: Retrieves line items in CSV format.
@@ -1643,9 +1668,22 @@ func (c *LineitemsDownloadlineitemsCall) Context(ctx context.Context) *Lineitems
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LineitemsDownloadlineitemsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LineitemsDownloadlineitemsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.downloadlineitemsrequest)
 	if err != nil {
@@ -1719,6 +1757,7 @@ type LineitemsUploadlineitemsCall struct {
 	uploadlineitemsrequest *UploadLineItemsRequest
 	urlParams_             gensupport.URLParams
 	ctx_                   context.Context
+	header_                http.Header
 }
 
 // Uploadlineitems: Uploads line items in CSV format.
@@ -1744,9 +1783,22 @@ func (c *LineitemsUploadlineitemsCall) Context(ctx context.Context) *LineitemsUp
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LineitemsUploadlineitemsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LineitemsUploadlineitemsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.uploadlineitemsrequest)
 	if err != nil {
@@ -1820,6 +1872,7 @@ type QueriesCreatequeryCall struct {
 	query      *Query
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Createquery: Creates a query.
@@ -1845,9 +1898,22 @@ func (c *QueriesCreatequeryCall) Context(ctx context.Context) *QueriesCreatequer
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *QueriesCreatequeryCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *QueriesCreatequeryCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.query)
 	if err != nil {
@@ -1921,6 +1987,7 @@ type QueriesDeletequeryCall struct {
 	queryId    int64
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Deletequery: Deletes a stored query as well as the associated stored
@@ -1947,9 +2014,22 @@ func (c *QueriesDeletequeryCall) Context(ctx context.Context) *QueriesDeletequer
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *QueriesDeletequeryCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *QueriesDeletequeryCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "query/{queryId}")
@@ -2003,6 +2083,7 @@ type QueriesGetqueryCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Getquery: Retrieves a stored query.
@@ -2038,9 +2119,22 @@ func (c *QueriesGetqueryCall) Context(ctx context.Context) *QueriesGetqueryCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *QueriesGetqueryCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *QueriesGetqueryCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2124,6 +2218,7 @@ type QueriesListqueriesCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Listqueries: Retrieves stored queries.
@@ -2158,9 +2253,22 @@ func (c *QueriesListqueriesCall) Context(ctx context.Context) *QueriesListquerie
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *QueriesListqueriesCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *QueriesListqueriesCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2230,6 +2338,7 @@ type QueriesRunqueryCall struct {
 	runqueryrequest *RunQueryRequest
 	urlParams_      gensupport.URLParams
 	ctx_            context.Context
+	header_         http.Header
 }
 
 // Runquery: Runs a stored query to generate a report.
@@ -2256,9 +2365,22 @@ func (c *QueriesRunqueryCall) Context(ctx context.Context) *QueriesRunqueryCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *QueriesRunqueryCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *QueriesRunqueryCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.runqueryrequest)
 	if err != nil {
@@ -2320,6 +2442,7 @@ type ReportsListreportsCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Listreports: Retrieves stored reports.
@@ -2355,9 +2478,22 @@ func (c *ReportsListreportsCall) Context(ctx context.Context) *ReportsListreport
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ReportsListreportsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ReportsListreportsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2441,6 +2577,7 @@ type SdfDownloadCall struct {
 	downloadrequest *DownloadRequest
 	urlParams_      gensupport.URLParams
 	ctx_            context.Context
+	header_         http.Header
 }
 
 // Download: Retrieves entities in SDF format.
@@ -2466,9 +2603,22 @@ func (c *SdfDownloadCall) Context(ctx context.Context) *SdfDownloadCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SdfDownloadCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SdfDownloadCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.downloadrequest)
 	if err != nil {

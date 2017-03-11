@@ -7,5 +7,5 @@ import:
 - package: github.com/nsf/termbox-go
 - package: github.com/gordonklaus/portaudio
 - package: github.com/mattn/go-shellwords
-  version: v1.0.0
 - package: github.com/mlbright/darksky
+- package: github.com/BurntSushi/toml

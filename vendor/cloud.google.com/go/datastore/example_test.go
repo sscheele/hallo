@@ -24,22 +24,6 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-// TODO(jbd): Document other authorization methods and refer to them here.
-func Example_auth() {
-	ctx := context.Background()
-	// Use Google Application Default Credentials to authorize and authenticate the client.
-	// More information about Application Default Credentials and how to enable is at
-	// https://developers.google.com/identity/protocols/application-default-credentials.
-	client, err := datastore.NewClient(ctx, "project-id")
-	if err != nil {
-		// TODO: Handle error.
-	}
-	// Use the client (see other examples).
-
-	// Close the client when finished.
-	client.Close()
-}
-
 func ExampleNewClient() {
 	ctx := context.Background()
 	client, err := datastore.NewClient(ctx, "project-id")
@@ -97,7 +81,7 @@ func ExampleClient_Put() {
 	}
 }
 
-func ExampleClient_PutFlatten() {
+func ExampleClient_Put_flatten() {
 	ctx := context.Background()
 	client, err := datastore.NewClient(ctx, "project-id")
 	if err != nil {
@@ -381,12 +365,16 @@ func ExampleDecodeKey() {
 	// Output: /Article,1
 }
 
-func ExampleNewKey() {
+func ExampleIDKey() {
 	// Key with numeric ID.
-	k1 := datastore.IDKey("Article", 1, nil)
+	k := datastore.IDKey("Article", 1, nil)
+	_ = k // TODO: Use key.
+}
+
+func ExampleNameKey() {
 	// Key with string ID.
-	k2 := datastore.NameKey("Article", "article8", nil)
-	_, _ = k1, k2 // TODO: Use keys.
+	k := datastore.NameKey("Article", "article8", nil)
+	_ = k // TODO: Use key.
 }
 
 func ExampleIncompleteKey() {

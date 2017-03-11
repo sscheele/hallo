@@ -61,9 +61,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	ShortLinks *ShortLinksService
 }
@@ -73,6 +74,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewShortLinksService(s *Service) *ShortLinksService {
@@ -278,13 +283,6 @@ type DynamicLinkInfo struct {
 	// [documentation](https://firebase.google.com/docs/dynamic-links/ios
 	// #create-a-dynamic-link-programmatically).
 	IosInfo *IosInfo `json:"iosInfo,omitempty"`
-
-	// IsAd: Declares that the Dynamic Link is used in an advertisement.
-	// See the 'ad' parameter in
-	// the
-	// [documentation](https://firebase.google.com/docs/dynamic-links/and
-	// roid#create-a-dynamic-link-programmatically).
-	IsAd bool `json:"isAd,omitempty"`
 
 	// Link: The link your app will open, You can specify any URL your app
 	// can handle.
@@ -645,6 +643,7 @@ type ShortLinksCreateCall struct {
 	createshortdynamiclinkrequest *CreateShortDynamicLinkRequest
 	urlParams_                    gensupport.URLParams
 	ctx_                          context.Context
+	header_                       http.Header
 }
 
 // Create: Creates a short Dynamic Link given either a valid long
@@ -682,9 +681,22 @@ func (c *ShortLinksCreateCall) Context(ctx context.Context) *ShortLinksCreateCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ShortLinksCreateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ShortLinksCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.createshortdynamiclinkrequest)
 	if err != nil {

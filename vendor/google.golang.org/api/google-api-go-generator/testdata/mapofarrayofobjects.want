@@ -53,9 +53,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Atlas *AtlasService
 }
@@ -67,6 +68,10 @@ func (s *Service) userAgent() string {
 	return googleapi.UserAgent + " " + s.UserAgent
 }
 
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
+}
+
 func NewAtlasService(s *Service) *AtlasService {
 	rs := &AtlasService{s: s}
 	return rs
@@ -74,6 +79,9 @@ func NewAtlasService(s *Service) *AtlasService {
 
 type AtlasService struct {
 	s *Service
+}
+
+type Property struct {
 }
 
 // TimeseriesDescriptor: The descriptions of a time series.
@@ -171,6 +179,7 @@ func (c *AtlasGetMapCall) doRequest(alt string) (*http.Response, error) {
 		reqHeaders[k] = v
 	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}

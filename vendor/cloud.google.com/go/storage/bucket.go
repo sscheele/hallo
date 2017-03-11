@@ -113,7 +113,7 @@ type BucketAttrs struct {
 	// MetaGeneration is the metadata generation of the bucket.
 	MetaGeneration int64
 
-	// StorageClass is the storage class of the bucket. This defines
+	// StorageClass is the default storage class of the bucket. This defines
 	// how objects in the bucket are stored and determines the SLA
 	// and the cost of storage. Typical values are "MULTI_REGIONAL",
 	// "REGIONAL", "NEARLINE", "COLDLINE", "STANDARD" and
@@ -246,6 +246,9 @@ func (it *ObjectIterator) fetch(pageSize int, pageToken string) (string, error) 
 		return err
 	})
 	if err != nil {
+		if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusNotFound {
+			err = ErrBucketNotExist
+		}
 		return "", err
 	}
 	for _, item := range resp.Items {

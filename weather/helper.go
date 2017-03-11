@@ -55,7 +55,8 @@ type DataPoint struct {
 	MoonPhase              float64 `json:"moonPhase"`
 }
 
-func init() {
+//InitConfig initializes the module with proper configuration
+func InitConfig() {
 	f, err := os.Open(config.Cfg.WeatherAPIPath)
 	if err != nil {
 		return

@@ -55,9 +55,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Cse *CseService
 }
@@ -67,6 +68,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewCseService(s *Service) *CseService {
@@ -357,7 +362,7 @@ type Result struct {
 
 	Mime string `json:"mime,omitempty"`
 
-	Pagemap map[string][]map[string]interface{} `json:"pagemap,omitempty"`
+	Pagemap map[string][]googleapi.RawMessage `json:"pagemap,omitempty"`
 
 	Snippet string `json:"snippet,omitempty"`
 
@@ -531,6 +536,20 @@ func (s *SearchSearchInformation) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+func (s *SearchSearchInformation) UnmarshalJSON(data []byte) error {
+	type noMethod SearchSearchInformation
+	var s1 struct {
+		SearchTime gensupport.JSONFloat64 `json:"searchTime"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.SearchTime = float64(s1.SearchTime)
+	return nil
+}
+
 type SearchSpelling struct {
 	CorrectedQuery string `json:"correctedQuery,omitempty"`
 
@@ -595,6 +614,7 @@ type CseListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns metadata about the search performed, metadata about the
@@ -941,9 +961,22 @@ func (c *CseListCall) Context(ctx context.Context) *CseListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CseListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CseListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}

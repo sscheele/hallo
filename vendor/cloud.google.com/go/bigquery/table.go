@@ -61,17 +61,22 @@ type TableMetadata struct {
 	// The number of rows of data in this table.
 	// This does not include data that is being buffered during a streaming insert.
 	NumRows uint64
+
+	// The time-based partitioning settings for this table.
+	TimePartitioning *TimePartitioning
 }
 
-// CreateDisposition specifies the circumstances under which destination table will be created.
+// TableCreateDisposition specifies the circumstances under which destination table will be created.
 // Default is CreateIfNeeded.
 type TableCreateDisposition string
 
 const (
-	// The table will be created if it does not already exist.  Tables are created atomically on successful completion of a job.
+	// CreateIfNeeded will create the table if it does not already exist.
+	// Tables are created atomically on successful completion of a job.
 	CreateIfNeeded TableCreateDisposition = "CREATE_IF_NEEDED"
 
-	// The table must already exist and will not be automatically created.
+	// CreateNever ensures the table must already exist and will not be
+	// automatically created.
 	CreateNever TableCreateDisposition = "CREATE_NEVER"
 )
 
@@ -80,15 +85,15 @@ const (
 type TableWriteDisposition string
 
 const (
-	// Data will be appended to any existing data in the destination table.
+	// WriteAppend will append to any existing data in the destination table.
 	// Data is appended atomically on successful completion of a job.
 	WriteAppend TableWriteDisposition = "WRITE_APPEND"
 
-	// Existing data in the destination table will be overwritten.
+	// WriteTruncate overrides the existing data in the destination table.
 	// Data is overwritten atomically on successful completion of a job.
 	WriteTruncate TableWriteDisposition = "WRITE_TRUNCATE"
 
-	// Writes will fail if the destination table already contains data.
+	// WriteEmpty fails writes if the destination table already contains data.
 	WriteEmpty TableWriteDisposition = "WRITE_EMPTY"
 )
 
@@ -173,6 +178,19 @@ func UseStandardSQL() CreateTableOption { return useStandardSQL{} }
 
 func (opt useStandardSQL) customizeCreateTable(conf *createTableConf) {
 	conf.useStandardSQL = true
+}
+
+// TimePartitioning is a CreateTableOption that can be used to set time-based
+// date partitioning on a table.
+// For more information see: https://cloud.google.com/bigquery/docs/creating-partitioned-tables
+type TimePartitioning struct {
+	// (Optional) The amount of time to keep the storage for a partition.
+	// If the duration is empty (0), the data in the partitions do not expire.
+	Expiration time.Duration
+}
+
+func (opt TimePartitioning) customizeCreateTable(conf *createTableConf) {
+	conf.timePartitioning = &opt
 }
 
 // Update modifies specific Table metadata fields.

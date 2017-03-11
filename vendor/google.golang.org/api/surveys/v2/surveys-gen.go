@@ -45,11 +45,11 @@ const basePath = "https://www.googleapis.com/surveys/v2/"
 
 // OAuth2 scopes used by this API.
 const (
-	// View and edit your surveys and results
-	ConsumersurveysScope = "https://www.googleapis.com/auth/consumersurveys"
+	// View and manage your surveys and results
+	SurveysScope = "https://www.googleapis.com/auth/surveys"
 
-	// View the results for your surveys
-	ConsumersurveysReadonlyScope = "https://www.googleapis.com/auth/consumersurveys.readonly"
+	// View your surveys and survey results
+	SurveysReadonlyScope = "https://www.googleapis.com/auth/surveys.readonly"
 
 	// View your email address
 	UserinfoEmailScope = "https://www.googleapis.com/auth/userinfo.email"
@@ -67,9 +67,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Mobileapppanels *MobileapppanelsService
 
@@ -83,6 +84,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewMobileapppanelsService(s *Service) *MobileapppanelsService {
@@ -351,7 +356,7 @@ type Survey struct {
 	Questions []*SurveyQuestion `json:"questions,omitempty"`
 
 	// RejectionReason: Reason for the survey being rejected. Only present
-	// if the survey state is 'rejected'.
+	// if the survey state is rejected.
 	RejectionReason *SurveyRejection `json:"rejectionReason,omitempty"`
 
 	// State: State that the survey is in.
@@ -663,8 +668,8 @@ type SurveyRejection struct {
 	// survey.
 	Explanation string `json:"explanation,omitempty"`
 
-	// Type: Which category of rejection this was. See the GCS Help Center
-	// for additional details on each category.
+	// Type: Which category of rejection this was. See the  Google Surveys
+	// Help Center for additional details on each category.
 	Type string `json:"type,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Explanation") to
@@ -936,6 +941,7 @@ type MobileapppanelsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Retrieves a MobileAppPanel that is available to the
@@ -972,9 +978,22 @@ func (c *MobileapppanelsGetCall) Context(ctx context.Context) *MobileapppanelsGe
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *MobileapppanelsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *MobileapppanelsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1047,8 +1066,8 @@ func (c *MobileapppanelsGetCall) Do(opts ...googleapi.CallOption) (*MobileAppPan
 	//     "$ref": "MobileAppPanel"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
-	//     "https://www.googleapis.com/auth/consumersurveys.readonly",
+	//     "https://www.googleapis.com/auth/surveys",
+	//     "https://www.googleapis.com/auth/surveys.readonly",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -1062,6 +1081,7 @@ type MobileapppanelsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the MobileAppPanels available to the authenticated user.
@@ -1114,9 +1134,22 @@ func (c *MobileapppanelsListCall) Context(ctx context.Context) *MobileapppanelsL
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *MobileapppanelsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *MobileapppanelsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1191,8 +1224,8 @@ func (c *MobileapppanelsListCall) Do(opts ...googleapi.CallOption) (*MobileAppPa
 	//     "$ref": "MobileAppPanelsListResponse"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
-	//     "https://www.googleapis.com/auth/consumersurveys.readonly",
+	//     "https://www.googleapis.com/auth/surveys",
+	//     "https://www.googleapis.com/auth/surveys.readonly",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -1207,6 +1240,7 @@ type MobileapppanelsUpdateCall struct {
 	mobileapppanel *MobileAppPanel
 	urlParams_     gensupport.URLParams
 	ctx_           context.Context
+	header_        http.Header
 }
 
 // Update: Updates a MobileAppPanel. Currently the only property that
@@ -1234,9 +1268,22 @@ func (c *MobileapppanelsUpdateCall) Context(ctx context.Context) *Mobileapppanel
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *MobileapppanelsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *MobileapppanelsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.mobileapppanel)
 	if err != nil {
@@ -1314,7 +1361,7 @@ func (c *MobileapppanelsUpdateCall) Do(opts ...googleapi.CallOption) (*MobileApp
 	//     "$ref": "MobileAppPanel"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
+	//     "https://www.googleapis.com/auth/surveys",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -1330,6 +1377,7 @@ type ResultsGetCall struct {
 	urlParams_        gensupport.URLParams
 	ifNoneMatch_      string
 	ctx_              context.Context
+	header_           http.Header
 }
 
 // Get: Retrieves any survey results that have been produced so far.
@@ -1368,9 +1416,22 @@ func (c *ResultsGetCall) Context(ctx context.Context) *ResultsGetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ResultsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ResultsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1462,8 +1523,8 @@ func (c *ResultsGetCall) Do(opts ...googleapi.CallOption) (*SurveyResults, error
 	//     "$ref": "SurveyResults"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
-	//     "https://www.googleapis.com/auth/consumersurveys.readonly",
+	//     "https://www.googleapis.com/auth/surveys",
+	//     "https://www.googleapis.com/auth/surveys.readonly",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ],
 	//   "supportsMediaDownload": true
@@ -1478,6 +1539,7 @@ type SurveysDeleteCall struct {
 	surveyUrlId string
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // Delete: Removes a survey from view in all user GET requests.
@@ -1503,9 +1565,22 @@ func (c *SurveysDeleteCall) Context(ctx context.Context) *SurveysDeleteCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SurveysDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SurveysDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "surveys/{surveyUrlId}")
@@ -1575,7 +1650,7 @@ func (c *SurveysDeleteCall) Do(opts ...googleapi.CallOption) (*SurveysDeleteResp
 	//     "$ref": "SurveysDeleteResponse"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
+	//     "https://www.googleapis.com/auth/surveys",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -1590,6 +1665,7 @@ type SurveysGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Retrieves information about the specified survey.
@@ -1625,9 +1701,22 @@ func (c *SurveysGetCall) Context(ctx context.Context) *SurveysGetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SurveysGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SurveysGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1700,8 +1789,8 @@ func (c *SurveysGetCall) Do(opts ...googleapi.CallOption) (*Survey, error) {
 	//     "$ref": "Survey"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
-	//     "https://www.googleapis.com/auth/consumersurveys.readonly",
+	//     "https://www.googleapis.com/auth/surveys",
+	//     "https://www.googleapis.com/auth/surveys.readonly",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -1715,6 +1804,7 @@ type SurveysInsertCall struct {
 	survey     *Survey
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Creates a survey.
@@ -1740,9 +1830,22 @@ func (c *SurveysInsertCall) Context(ctx context.Context) *SurveysInsertCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SurveysInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SurveysInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.survey)
 	if err != nil {
@@ -1806,7 +1909,7 @@ func (c *SurveysInsertCall) Do(opts ...googleapi.CallOption) (*Survey, error) {
 	//     "$ref": "Survey"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
+	//     "https://www.googleapis.com/auth/surveys",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -1820,6 +1923,7 @@ type SurveysListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the surveys owned by the authenticated user.
@@ -1872,9 +1976,22 @@ func (c *SurveysListCall) Context(ctx context.Context) *SurveysListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SurveysListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SurveysListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1949,8 +2066,8 @@ func (c *SurveysListCall) Do(opts ...googleapi.CallOption) (*SurveysListResponse
 	//     "$ref": "SurveysListResponse"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
-	//     "https://www.googleapis.com/auth/consumersurveys.readonly",
+	//     "https://www.googleapis.com/auth/surveys",
+	//     "https://www.googleapis.com/auth/surveys.readonly",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -1965,6 +2082,7 @@ type SurveysStartCall struct {
 	surveysstartrequest *SurveysStartRequest
 	urlParams_          gensupport.URLParams
 	ctx_                context.Context
+	header_             http.Header
 }
 
 // Start: Begins running a survey.
@@ -1991,9 +2109,22 @@ func (c *SurveysStartCall) Context(ctx context.Context) *SurveysStartCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SurveysStartCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SurveysStartCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.surveysstartrequest)
 	if err != nil {
@@ -2070,7 +2201,7 @@ func (c *SurveysStartCall) Do(opts ...googleapi.CallOption) (*SurveysStartRespon
 	//     "$ref": "SurveysStartResponse"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
+	//     "https://www.googleapis.com/auth/surveys",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -2084,6 +2215,7 @@ type SurveysStopCall struct {
 	resourceId string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Stop: Stops a running survey.
@@ -2109,9 +2241,22 @@ func (c *SurveysStopCall) Context(ctx context.Context) *SurveysStopCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SurveysStopCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SurveysStopCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "surveys/{resourceId}/stop")
@@ -2180,7 +2325,7 @@ func (c *SurveysStopCall) Do(opts ...googleapi.CallOption) (*SurveysStopResponse
 	//     "$ref": "SurveysStopResponse"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
+	//     "https://www.googleapis.com/auth/surveys",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }
@@ -2195,6 +2340,7 @@ type SurveysUpdateCall struct {
 	survey      *Survey
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // Update: Updates a survey. Currently the only property that can be
@@ -2222,9 +2368,22 @@ func (c *SurveysUpdateCall) Context(ctx context.Context) *SurveysUpdateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SurveysUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SurveysUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.survey)
 	if err != nil {
@@ -2302,7 +2461,7 @@ func (c *SurveysUpdateCall) Do(opts ...googleapi.CallOption) (*Survey, error) {
 	//     "$ref": "Survey"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/consumersurveys",
+	//     "https://www.googleapis.com/auth/surveys",
 	//     "https://www.googleapis.com/auth/userinfo.email"
 	//   ]
 	// }

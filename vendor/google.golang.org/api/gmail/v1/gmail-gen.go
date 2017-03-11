@@ -47,7 +47,7 @@ const basePath = "https://www.googleapis.com/gmail/v1/users/"
 
 // OAuth2 scopes used by this API.
 const (
-	// View and manage your mail
+	// Read, send, delete, and manage your email
 	MailGoogleComScope = "https://mail.google.com/"
 
 	// Manage drafts and send emails
@@ -58,6 +58,10 @@ const (
 
 	// Manage mailbox labels
 	GmailLabelsScope = "https://www.googleapis.com/auth/gmail.labels"
+
+	// View your email message metadata such as labels and headers, but not
+	// the email body
+	GmailMetadataScope = "https://www.googleapis.com/auth/gmail.metadata"
 
 	// View and modify but not delete your email
 	GmailModifyScope = "https://www.googleapis.com/auth/gmail.modify"
@@ -86,9 +90,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Users *UsersService
 }
@@ -98,6 +103,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewUsersService(s *Service) *UsersService {
@@ -213,10 +222,22 @@ type UsersSettingsForwardingAddressesService struct {
 
 func NewUsersSettingsSendAsService(s *Service) *UsersSettingsSendAsService {
 	rs := &UsersSettingsSendAsService{s: s}
+	rs.SmimeInfo = NewUsersSettingsSendAsSmimeInfoService(s)
 	return rs
 }
 
 type UsersSettingsSendAsService struct {
+	s *Service
+
+	SmimeInfo *UsersSettingsSendAsSmimeInfoService
+}
+
+func NewUsersSettingsSendAsSmimeInfoService(s *Service) *UsersSettingsSendAsSmimeInfoService {
+	rs := &UsersSettingsSendAsSmimeInfoService{s: s}
+	return rs
+}
+
+type UsersSettingsSendAsSmimeInfoService struct {
 	s *Service
 }
 
@@ -301,6 +322,40 @@ type BatchDeleteMessagesRequest struct {
 
 func (s *BatchDeleteMessagesRequest) MarshalJSON() ([]byte, error) {
 	type noMethod BatchDeleteMessagesRequest
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type BatchModifyMessagesRequest struct {
+	// AddLabelIds: A list of label IDs to add to messages.
+	AddLabelIds []string `json:"addLabelIds,omitempty"`
+
+	// Ids: The IDs of the messages to modify. There is a limit of 1000 ids
+	// per request.
+	Ids []string `json:"ids,omitempty"`
+
+	// RemoveLabelIds: A list of label IDs to remove from messages.
+	RemoveLabelIds []string `json:"removeLabelIds,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AddLabelIds") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AddLabelIds") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *BatchModifyMessagesRequest) MarshalJSON() ([]byte, error) {
+	type noMethod BatchModifyMessagesRequest
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -1061,6 +1116,37 @@ func (s *ListSendAsResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type ListSmimeInfoResponse struct {
+	// SmimeInfo: List of SmimeInfo.
+	SmimeInfo []*SmimeInfo `json:"smimeInfo,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "SmimeInfo") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "SmimeInfo") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ListSmimeInfoResponse) MarshalJSON() ([]byte, error) {
+	type noMethod ListSmimeInfoResponse
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 type ListThreadsResponse struct {
 	// NextPageToken: Page token to retrieve the next page of results in the
 	// list.
@@ -1228,13 +1314,15 @@ type MessagePartBody struct {
 	// contained in the data field.
 	AttachmentId string `json:"attachmentId,omitempty"`
 
-	// Data: The body data of a MIME message part. May be empty for MIME
-	// container types that have no message body or when the body data is
-	// sent as a separate attachment. An attachment ID is present if the
-	// body data is contained in a separate attachment.
+	// Data: The body data of a MIME message part as a base64url encoded
+	// string. May be empty for MIME container types that have no message
+	// body or when the body data is sent as a separate attachment. An
+	// attachment ID is present if the body data is contained in a separate
+	// attachment.
 	Data string `json:"data,omitempty"`
 
-	// Size: Total number of bytes in the body of the message part.
+	// Size: Number of bytes for the message part data (encoding
+	// notwithstanding).
 	Size int64 `json:"size,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -1448,7 +1536,7 @@ func (s *Profile) MarshalJSON() ([]byte, error) {
 // SendAs: Settings associated with a send-as alias, which can be either
 // the primary login address associated with the account or a custom
 // "from" address. Send-as aliases correspond to the "Send Mail As"
-// feature in the web interface. See  for more details.
+// feature in the web interface.
 type SendAs struct {
 	// DisplayName: A name that appears in the "From:" header for mail sent
 	// using this alias. For custom "from" addresses, when this is empty,
@@ -1491,9 +1579,9 @@ type SendAs struct {
 	// service. This setting only applies to custom "from" aliases.
 	SmtpMsa *SmtpMsa `json:"smtpMsa,omitempty"`
 
-	// TreatAsAlias: Whether Gmail should treat this address as an alias for
-	// the user's primary email address. See  for more details. This setting
-	// only applies to custom "from" aliases.
+	// TreatAsAlias: Whether Gmail should  treat this address as an alias
+	// for the user's primary email address. This setting only applies to
+	// custom "from" aliases.
 	TreatAsAlias bool `json:"treatAsAlias,omitempty"`
 
 	// VerificationStatus: Indicates whether this address has been verified
@@ -1529,6 +1617,66 @@ type SendAs struct {
 
 func (s *SendAs) MarshalJSON() ([]byte, error) {
 	type noMethod SendAs
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// SmimeInfo: An S/MIME email config.
+type SmimeInfo struct {
+	// EncryptedKeyPassword: Encrypted key password, when key is encrypted.
+	EncryptedKeyPassword string `json:"encryptedKeyPassword,omitempty"`
+
+	// Expiration: When the certificate expires (in milliseconds since
+	// epoch).
+	Expiration int64 `json:"expiration,omitempty,string"`
+
+	// Id: The immutable ID for the SmimeInfo.
+	Id string `json:"id,omitempty"`
+
+	// IsDefault: Whether this SmimeInfo is the default one for this user's
+	// send-as address.
+	IsDefault bool `json:"isDefault,omitempty"`
+
+	// IssuerCn: The S/MIME certificate issuer's common name.
+	IssuerCn string `json:"issuerCn,omitempty"`
+
+	// Pem: PEM formatted X509 concatenated certificate string (standard
+	// base64 encoding). Format used for returning key, which includes
+	// public key as well as certificate chain (not private key).
+	Pem string `json:"pem,omitempty"`
+
+	// Pkcs12: PKCS#12 format containing a single private/public key pair
+	// and certificate chain. This format is only accepted from client for
+	// creating a new SmimeInfo and is never returned, because the private
+	// key is not intended to be exported. PKCS#12 may be encrypted, in
+	// which case encryptedKeyPassword should be set appropriately.
+	Pkcs12 string `json:"pkcs12,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g.
+	// "EncryptedKeyPassword") to unconditionally include in API requests.
+	// By default, fields with empty values are omitted from API requests.
+	// However, any non-pointer, non-interface field appearing in
+	// ForceSendFields will be sent to the server regardless of whether the
+	// field is empty or not. This may be used to include empty fields in
+	// Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "EncryptedKeyPassword") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SmimeInfo) MarshalJSON() ([]byte, error) {
+	type noMethod SmimeInfo
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -1630,7 +1778,7 @@ func (s *Thread) MarshalJSON() ([]byte, error) {
 
 // VacationSettings: Vacation auto-reply settings for an account. These
 // settings correspond to the "Vacation responder" feature in the web
-// interface. See  for more details.
+// interface.
 type VacationSettings struct {
 	// EnableAutoReply: Flag that controls whether Gmail automatically
 	// replies to messages.
@@ -1660,7 +1808,7 @@ type VacationSettings struct {
 
 	// RestrictToDomain: Flag that determines whether responses are sent to
 	// recipients who are outside of the user's domain. This feature is only
-	// available for Google Apps users.
+	// available for G Suite users.
 	RestrictToDomain bool `json:"restrictToDomain,omitempty"`
 
 	// StartTime: An optional start time for sending auto-replies (epoch
@@ -1793,6 +1941,7 @@ type UsersGetProfileCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetProfile: Gets the current user's Gmail profile.
@@ -1828,9 +1977,22 @@ func (c *UsersGetProfileCall) Context(ctx context.Context) *UsersGetProfileCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersGetProfileCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersGetProfileCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1906,6 +2068,7 @@ func (c *UsersGetProfileCall) Do(opts ...googleapi.CallOption) (*Profile, error)
 	//   "scopes": [
 	//     "https://mail.google.com/",
 	//     "https://www.googleapis.com/auth/gmail.compose",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -1920,6 +2083,7 @@ type UsersStopCall struct {
 	userId     string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Stop: Stop receiving push notifications for the given user mailbox.
@@ -1945,9 +2109,22 @@ func (c *UsersStopCall) Context(ctx context.Context) *UsersStopCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersStopCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersStopCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/stop")
@@ -1991,6 +2168,7 @@ func (c *UsersStopCall) Do(opts ...googleapi.CallOption) error {
 	//   "path": "{userId}/stop",
 	//   "scopes": [
 	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -2006,6 +2184,7 @@ type UsersWatchCall struct {
 	watchrequest *WatchRequest
 	urlParams_   gensupport.URLParams
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Watch: Set up or update a push notification watch on the given user
@@ -2033,9 +2212,22 @@ func (c *UsersWatchCall) Context(ctx context.Context) *UsersWatchCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersWatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersWatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.watchrequest)
 	if err != nil {
@@ -2115,6 +2307,7 @@ func (c *UsersWatchCall) Do(opts ...googleapi.CallOption) (*WatchResponse, error
 	//   },
 	//   "scopes": [
 	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -2135,6 +2328,7 @@ type UsersDraftsCreateCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Create: Creates a new draft with the DRAFT label.
@@ -2209,9 +2403,22 @@ func (c *UsersDraftsCreateCall) Context(ctx context.Context) *UsersDraftsCreateC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersDraftsCreateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersDraftsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.draft)
 	if err != nil {
@@ -2371,6 +2578,7 @@ type UsersDraftsDeleteCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Immediately and permanently deletes the specified draft. Does
@@ -2398,9 +2606,22 @@ func (c *UsersDraftsDeleteCall) Context(ctx context.Context) *UsersDraftsDeleteC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersDraftsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersDraftsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/drafts/{id}")
@@ -2468,6 +2689,7 @@ type UsersDraftsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets the specified draft.
@@ -2517,9 +2739,22 @@ func (c *UsersDraftsGetCall) Context(ctx context.Context) *UsersDraftsGetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersDraftsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersDraftsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2636,6 +2871,7 @@ type UsersDraftsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the drafts in the user's mailbox.
@@ -2701,9 +2937,22 @@ func (c *UsersDraftsListCall) Context(ctx context.Context) *UsersDraftsListCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersDraftsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersDraftsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -2843,6 +3092,7 @@ type UsersDraftsSendCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Send: Sends the specified, existing draft to the recipients in the
@@ -2918,9 +3168,22 @@ func (c *UsersDraftsSendCall) Context(ctx context.Context) *UsersDraftsSendCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersDraftsSendCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersDraftsSendCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.draft)
 	if err != nil {
@@ -3086,6 +3349,7 @@ type UsersDraftsUpdateCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Update: Replaces a draft's content.
@@ -3161,9 +3425,22 @@ func (c *UsersDraftsUpdateCall) Context(ctx context.Context) *UsersDraftsUpdateC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersDraftsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersDraftsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.draft)
 	if err != nil {
@@ -3331,6 +3608,7 @@ type UsersHistoryListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the history of all changes to the given mailbox. History
@@ -3338,6 +3616,19 @@ type UsersHistoryListCall struct {
 func (r *UsersHistoryService) List(userId string) *UsersHistoryListCall {
 	c := &UsersHistoryListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
+	return c
+}
+
+// HistoryTypes sets the optional parameter "historyTypes": History
+// types to be returned by the function
+//
+// Possible values:
+//   "labelAdded"
+//   "labelRemoved"
+//   "messageAdded"
+//   "messageDeleted"
+func (c *UsersHistoryListCall) HistoryTypes(historyTypes ...string) *UsersHistoryListCall {
+	c.urlParams_.SetMulti("historyTypes", append([]string{}, historyTypes...))
 	return c
 }
 
@@ -3405,9 +3696,22 @@ func (c *UsersHistoryListCall) Context(ctx context.Context) *UsersHistoryListCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersHistoryListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersHistoryListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -3468,6 +3772,24 @@ func (c *UsersHistoryListCall) Do(opts ...googleapi.CallOption) (*ListHistoryRes
 	//     "userId"
 	//   ],
 	//   "parameters": {
+	//     "historyTypes": {
+	//       "description": "History types to be returned by the function",
+	//       "enum": [
+	//         "labelAdded",
+	//         "labelRemoved",
+	//         "messageAdded",
+	//         "messageDeleted"
+	//       ],
+	//       "enumDescriptions": [
+	//         "",
+	//         "",
+	//         "",
+	//         ""
+	//       ],
+	//       "location": "query",
+	//       "repeated": true,
+	//       "type": "string"
+	//     },
 	//     "labelId": {
 	//       "description": "Only return messages with a label matching the ID.",
 	//       "location": "query",
@@ -3505,6 +3827,7 @@ func (c *UsersHistoryListCall) Do(opts ...googleapi.CallOption) (*ListHistoryRes
 	//   },
 	//   "scopes": [
 	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -3541,6 +3864,7 @@ type UsersLabelsCreateCall struct {
 	label      *Label
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Create: Creates a new label.
@@ -3567,9 +3891,22 @@ func (c *UsersLabelsCreateCall) Context(ctx context.Context) *UsersLabelsCreateC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersLabelsCreateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersLabelsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.label)
 	if err != nil {
@@ -3664,6 +4001,7 @@ type UsersLabelsDeleteCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Immediately and permanently deletes the specified label and
@@ -3691,9 +4029,22 @@ func (c *UsersLabelsDeleteCall) Context(ctx context.Context) *UsersLabelsDeleteC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersLabelsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersLabelsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/labels/{id}")
@@ -3761,6 +4112,7 @@ type UsersLabelsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets the specified label.
@@ -3797,9 +4149,22 @@ func (c *UsersLabelsGetCall) Context(ctx context.Context) *UsersLabelsGetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersLabelsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersLabelsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -3883,6 +4248,7 @@ func (c *UsersLabelsGetCall) Do(opts ...googleapi.CallOption) (*Label, error) {
 	//   "scopes": [
 	//     "https://mail.google.com/",
 	//     "https://www.googleapis.com/auth/gmail.labels",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -3898,6 +4264,7 @@ type UsersLabelsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists all labels in the user's mailbox.
@@ -3933,9 +4300,22 @@ func (c *UsersLabelsListCall) Context(ctx context.Context) *UsersLabelsListCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersLabelsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersLabelsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -4011,6 +4391,7 @@ func (c *UsersLabelsListCall) Do(opts ...googleapi.CallOption) (*ListLabelsRespo
 	//   "scopes": [
 	//     "https://mail.google.com/",
 	//     "https://www.googleapis.com/auth/gmail.labels",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -4027,6 +4408,7 @@ type UsersLabelsPatchCall struct {
 	label      *Label
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Patch: Updates the specified label. This method supports patch
@@ -4055,9 +4437,22 @@ func (c *UsersLabelsPatchCall) Context(ctx context.Context) *UsersLabelsPatchCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersLabelsPatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersLabelsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.label)
 	if err != nil {
@@ -4161,6 +4556,7 @@ type UsersLabelsUpdateCall struct {
 	label      *Label
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Updates the specified label.
@@ -4188,9 +4584,22 @@ func (c *UsersLabelsUpdateCall) Context(ctx context.Context) *UsersLabelsUpdateC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersLabelsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersLabelsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.label)
 	if err != nil {
@@ -4293,6 +4702,7 @@ type UsersMessagesBatchDeleteCall struct {
 	batchdeletemessagesrequest *BatchDeleteMessagesRequest
 	urlParams_                 gensupport.URLParams
 	ctx_                       context.Context
+	header_                    http.Header
 }
 
 // BatchDelete: Deletes many messages by message ID. Provides no
@@ -4321,9 +4731,22 @@ func (c *UsersMessagesBatchDeleteCall) Context(ctx context.Context) *UsersMessag
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesBatchDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesBatchDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.batchdeletemessagesrequest)
 	if err != nil {
@@ -4380,6 +4803,114 @@ func (c *UsersMessagesBatchDeleteCall) Do(opts ...googleapi.CallOption) error {
 
 }
 
+// method id "gmail.users.messages.batchModify":
+
+type UsersMessagesBatchModifyCall struct {
+	s                          *Service
+	userId                     string
+	batchmodifymessagesrequest *BatchModifyMessagesRequest
+	urlParams_                 gensupport.URLParams
+	ctx_                       context.Context
+	header_                    http.Header
+}
+
+// BatchModify: Modifies the labels on the specified messages.
+func (r *UsersMessagesService) BatchModify(userId string, batchmodifymessagesrequest *BatchModifyMessagesRequest) *UsersMessagesBatchModifyCall {
+	c := &UsersMessagesBatchModifyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.userId = userId
+	c.batchmodifymessagesrequest = batchmodifymessagesrequest
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *UsersMessagesBatchModifyCall) Fields(s ...googleapi.Field) *UsersMessagesBatchModifyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *UsersMessagesBatchModifyCall) Context(ctx context.Context) *UsersMessagesBatchModifyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesBatchModifyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *UsersMessagesBatchModifyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.batchmodifymessagesrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/messages/batchModify")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"userId": c.userId,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "gmail.users.messages.batchModify" call.
+func (c *UsersMessagesBatchModifyCall) Do(opts ...googleapi.CallOption) error {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if err != nil {
+		return err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return err
+	}
+	return nil
+	// {
+	//   "description": "Modifies the labels on the specified messages.",
+	//   "httpMethod": "POST",
+	//   "id": "gmail.users.messages.batchModify",
+	//   "parameterOrder": [
+	//     "userId"
+	//   ],
+	//   "parameters": {
+	//     "userId": {
+	//       "default": "me",
+	//       "description": "The user's email address. The special value me can be used to indicate the authenticated user.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{userId}/messages/batchModify",
+	//   "request": {
+	//     "$ref": "BatchModifyMessagesRequest"
+	//   },
+	//   "scopes": [
+	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.modify"
+	//   ]
+	// }
+
+}
+
 // method id "gmail.users.messages.delete":
 
 type UsersMessagesDeleteCall struct {
@@ -4388,6 +4919,7 @@ type UsersMessagesDeleteCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Immediately and permanently deletes the specified message.
@@ -4415,9 +4947,22 @@ func (c *UsersMessagesDeleteCall) Context(ctx context.Context) *UsersMessagesDel
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/messages/{id}")
@@ -4483,6 +5028,7 @@ type UsersMessagesGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets the specified message.
@@ -4539,9 +5085,22 @@ func (c *UsersMessagesGetCall) Context(ctx context.Context) *UsersMessagesGetCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -4648,6 +5207,7 @@ func (c *UsersMessagesGetCall) Do(opts ...googleapi.CallOption) (*Message, error
 	//   },
 	//   "scopes": [
 	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -4668,6 +5228,7 @@ type UsersMessagesImportCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Import: Imports a message into only this user's mailbox, with
@@ -4681,9 +5242,8 @@ func (r *UsersMessagesService) Import(userId string, message *Message) *UsersMes
 }
 
 // Deleted sets the optional parameter "deleted": Mark the email as
-// permanently deleted (not TRASH) and only visible in Google Apps Vault
-// to a Vault administrator. Only used for Google Apps for Work
-// accounts.
+// permanently deleted (not TRASH) and only visible in Google Vault to a
+// Vault administrator. Only used for G Suite accounts.
 func (c *UsersMessagesImportCall) Deleted(deleted bool) *UsersMessagesImportCall {
 	c.urlParams_.Set("deleted", fmt.Sprint(deleted))
 	return c
@@ -4780,9 +5340,22 @@ func (c *UsersMessagesImportCall) Context(ctx context.Context) *UsersMessagesImp
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesImportCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesImportCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.message)
 	if err != nil {
@@ -4911,7 +5484,7 @@ func (c *UsersMessagesImportCall) Do(opts ...googleapi.CallOption) (*Message, er
 	//   "parameters": {
 	//     "deleted": {
 	//       "default": "false",
-	//       "description": "Mark the email as permanently deleted (not TRASH) and only visible in Google Apps Vault to a Vault administrator. Only used for Google Apps for Work accounts.",
+	//       "description": "Mark the email as permanently deleted (not TRASH) and only visible in Google Vault to a Vault administrator. Only used for G Suite accounts.",
 	//       "location": "query",
 	//       "type": "boolean"
 	//     },
@@ -4979,6 +5552,7 @@ type UsersMessagesInsertCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Insert: Directly inserts a message into only this user's mailbox
@@ -4992,9 +5566,8 @@ func (r *UsersMessagesService) Insert(userId string, message *Message) *UsersMes
 }
 
 // Deleted sets the optional parameter "deleted": Mark the email as
-// permanently deleted (not TRASH) and only visible in Google Apps Vault
-// to a Vault administrator. Only used for Google Apps for Work
-// accounts.
+// permanently deleted (not TRASH) and only visible in Google Vault to a
+// Vault administrator. Only used for G Suite accounts.
 func (c *UsersMessagesInsertCall) Deleted(deleted bool) *UsersMessagesInsertCall {
 	c.urlParams_.Set("deleted", fmt.Sprint(deleted))
 	return c
@@ -5075,9 +5648,22 @@ func (c *UsersMessagesInsertCall) Context(ctx context.Context) *UsersMessagesIns
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.message)
 	if err != nil {
@@ -5206,7 +5792,7 @@ func (c *UsersMessagesInsertCall) Do(opts ...googleapi.CallOption) (*Message, er
 	//   "parameters": {
 	//     "deleted": {
 	//       "default": "false",
-	//       "description": "Mark the email as permanently deleted (not TRASH) and only visible in Google Apps Vault to a Vault administrator. Only used for Google Apps for Work accounts.",
+	//       "description": "Mark the email as permanently deleted (not TRASH) and only visible in Google Vault to a Vault administrator. Only used for G Suite accounts.",
 	//       "location": "query",
 	//       "type": "boolean"
 	//     },
@@ -5257,6 +5843,7 @@ type UsersMessagesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the messages in the user's mailbox.
@@ -5297,6 +5884,8 @@ func (c *UsersMessagesListCall) PageToken(pageToken string) *UsersMessagesListCa
 // Q sets the optional parameter "q": Only return messages matching the
 // specified query. Supports the same query format as the Gmail search
 // box. For example, "from:someuser@example.com rfc822msgid: is:unread".
+// Parameter cannot be used when accessing the api using the
+// gmail.metadata scope.
 func (c *UsersMessagesListCall) Q(q string) *UsersMessagesListCall {
 	c.urlParams_.Set("q", q)
 	return c
@@ -5328,9 +5917,22 @@ func (c *UsersMessagesListCall) Context(ctx context.Context) *UsersMessagesListC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -5416,7 +6018,7 @@ func (c *UsersMessagesListCall) Do(opts ...googleapi.CallOption) (*ListMessagesR
 	//       "type": "string"
 	//     },
 	//     "q": {
-	//       "description": "Only return messages matching the specified query. Supports the same query format as the Gmail search box. For example, \"from:someuser@example.com rfc822msgid: is:unread\".",
+	//       "description": "Only return messages matching the specified query. Supports the same query format as the Gmail search box. For example, \"from:someuser@example.com rfc822msgid: is:unread\". Parameter cannot be used when accessing the api using the gmail.metadata scope.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -5434,6 +6036,7 @@ func (c *UsersMessagesListCall) Do(opts ...googleapi.CallOption) (*ListMessagesR
 	//   },
 	//   "scopes": [
 	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -5471,6 +6074,7 @@ type UsersMessagesModifyCall struct {
 	modifymessagerequest *ModifyMessageRequest
 	urlParams_           gensupport.URLParams
 	ctx_                 context.Context
+	header_              http.Header
 }
 
 // Modify: Modifies the labels on the specified message.
@@ -5498,9 +6102,22 @@ func (c *UsersMessagesModifyCall) Context(ctx context.Context) *UsersMessagesMod
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesModifyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesModifyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.modifymessagerequest)
 	if err != nil {
@@ -5607,6 +6224,7 @@ type UsersMessagesSendCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Send: Sends the specified message to the recipients in the To, Cc,
@@ -5682,9 +6300,22 @@ func (c *UsersMessagesSendCall) Context(ctx context.Context) *UsersMessagesSendC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesSendCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesSendCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.message)
 	if err != nil {
@@ -5845,6 +6476,7 @@ type UsersMessagesTrashCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Trash: Moves the specified message to the trash.
@@ -5871,9 +6503,22 @@ func (c *UsersMessagesTrashCall) Context(ctx context.Context) *UsersMessagesTras
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesTrashCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesTrashCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/messages/{id}/trash")
@@ -5967,6 +6612,7 @@ type UsersMessagesUntrashCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Untrash: Removes the specified message from the trash.
@@ -5993,9 +6639,22 @@ func (c *UsersMessagesUntrashCall) Context(ctx context.Context) *UsersMessagesUn
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesUntrashCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesUntrashCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/messages/{id}/untrash")
@@ -6091,6 +6750,7 @@ type UsersMessagesAttachmentsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets the specified message attachment.
@@ -6128,9 +6788,22 @@ func (c *UsersMessagesAttachmentsGetCall) Context(ctx context.Context) *UsersMes
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersMessagesAttachmentsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersMessagesAttachmentsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -6236,6 +6909,7 @@ type UsersSettingsGetAutoForwardingCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetAutoForwarding: Gets the auto-forwarding setting for the specified
@@ -6272,9 +6946,22 @@ func (c *UsersSettingsGetAutoForwardingCall) Context(ctx context.Context) *Users
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsGetAutoForwardingCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsGetAutoForwardingCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -6365,6 +7052,7 @@ type UsersSettingsGetImapCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetImap: Gets IMAP settings.
@@ -6400,9 +7088,22 @@ func (c *UsersSettingsGetImapCall) Context(ctx context.Context) *UsersSettingsGe
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsGetImapCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsGetImapCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -6493,6 +7194,7 @@ type UsersSettingsGetPopCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetPop: Gets POP settings.
@@ -6528,9 +7230,22 @@ func (c *UsersSettingsGetPopCall) Context(ctx context.Context) *UsersSettingsGet
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsGetPopCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsGetPopCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -6621,6 +7336,7 @@ type UsersSettingsGetVacationCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetVacation: Gets vacation responder settings.
@@ -6656,9 +7372,22 @@ func (c *UsersSettingsGetVacationCall) Context(ctx context.Context) *UsersSettin
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsGetVacationCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsGetVacationCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -6749,11 +7478,15 @@ type UsersSettingsUpdateAutoForwardingCall struct {
 	autoforwarding *AutoForwarding
 	urlParams_     gensupport.URLParams
 	ctx_           context.Context
+	header_        http.Header
 }
 
 // UpdateAutoForwarding: Updates the auto-forwarding setting for the
 // specified account. A verified forwarding address must be specified
 // when auto-forwarding is enabled.
+//
+// This method is only available to service account clients that have
+// been delegated domain-wide authority.
 func (r *UsersSettingsService) UpdateAutoForwarding(userId string, autoforwarding *AutoForwarding) *UsersSettingsUpdateAutoForwardingCall {
 	c := &UsersSettingsUpdateAutoForwardingCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -6777,9 +7510,22 @@ func (c *UsersSettingsUpdateAutoForwardingCall) Context(ctx context.Context) *Us
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsUpdateAutoForwardingCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsUpdateAutoForwardingCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.autoforwarding)
 	if err != nil {
@@ -6835,7 +7581,7 @@ func (c *UsersSettingsUpdateAutoForwardingCall) Do(opts ...googleapi.CallOption)
 	}
 	return ret, nil
 	// {
-	//   "description": "Updates the auto-forwarding setting for the specified account. A verified forwarding address must be specified when auto-forwarding is enabled.",
+	//   "description": "Updates the auto-forwarding setting for the specified account. A verified forwarding address must be specified when auto-forwarding is enabled.\n\nThis method is only available to service account clients that have been delegated domain-wide authority.",
 	//   "httpMethod": "PUT",
 	//   "id": "gmail.users.settings.updateAutoForwarding",
 	//   "parameterOrder": [
@@ -6872,6 +7618,7 @@ type UsersSettingsUpdateImapCall struct {
 	imapsettings *ImapSettings
 	urlParams_   gensupport.URLParams
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // UpdateImap: Updates IMAP settings.
@@ -6898,9 +7645,22 @@ func (c *UsersSettingsUpdateImapCall) Context(ctx context.Context) *UsersSetting
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsUpdateImapCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsUpdateImapCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.imapsettings)
 	if err != nil {
@@ -6993,6 +7753,7 @@ type UsersSettingsUpdatePopCall struct {
 	popsettings *PopSettings
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // UpdatePop: Updates POP settings.
@@ -7019,9 +7780,22 @@ func (c *UsersSettingsUpdatePopCall) Context(ctx context.Context) *UsersSettings
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsUpdatePopCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsUpdatePopCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.popsettings)
 	if err != nil {
@@ -7114,6 +7888,7 @@ type UsersSettingsUpdateVacationCall struct {
 	vacationsettings *VacationSettings
 	urlParams_       gensupport.URLParams
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // UpdateVacation: Updates vacation responder settings.
@@ -7140,9 +7915,22 @@ func (c *UsersSettingsUpdateVacationCall) Context(ctx context.Context) *UsersSet
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsUpdateVacationCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsUpdateVacationCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.vacationsettings)
 	if err != nil {
@@ -7235,6 +8023,7 @@ type UsersSettingsFiltersCreateCall struct {
 	filter     *Filter
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Create: Creates a filter.
@@ -7261,9 +8050,22 @@ func (c *UsersSettingsFiltersCreateCall) Context(ctx context.Context) *UsersSett
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsFiltersCreateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsFiltersCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.filter)
 	if err != nil {
@@ -7356,6 +8158,7 @@ type UsersSettingsFiltersDeleteCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a filter.
@@ -7382,9 +8185,22 @@ func (c *UsersSettingsFiltersDeleteCall) Context(ctx context.Context) *UsersSett
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsFiltersDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsFiltersDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/filters/{id}")
@@ -7450,6 +8266,7 @@ type UsersSettingsFiltersGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets a filter.
@@ -7486,9 +8303,22 @@ func (c *UsersSettingsFiltersGetCall) Context(ctx context.Context) *UsersSetting
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsFiltersGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsFiltersGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -7587,6 +8417,7 @@ type UsersSettingsFiltersListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the message filters of a Gmail user.
@@ -7622,9 +8453,22 @@ func (c *UsersSettingsFiltersListCall) Context(ctx context.Context) *UsersSettin
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsFiltersListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsFiltersListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -7715,12 +8559,16 @@ type UsersSettingsForwardingAddressesCreateCall struct {
 	forwardingaddress *ForwardingAddress
 	urlParams_        gensupport.URLParams
 	ctx_              context.Context
+	header_           http.Header
 }
 
 // Create: Creates a forwarding address. If ownership verification is
 // required, a message will be sent to the recipient and the resource's
 // verification status will be set to pending; otherwise, the resource
 // will be created with verification status set to accepted.
+//
+// This method is only available to service account clients that have
+// been delegated domain-wide authority.
 func (r *UsersSettingsForwardingAddressesService) Create(userId string, forwardingaddress *ForwardingAddress) *UsersSettingsForwardingAddressesCreateCall {
 	c := &UsersSettingsForwardingAddressesCreateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -7744,9 +8592,22 @@ func (c *UsersSettingsForwardingAddressesCreateCall) Context(ctx context.Context
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsForwardingAddressesCreateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsForwardingAddressesCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.forwardingaddress)
 	if err != nil {
@@ -7802,7 +8663,7 @@ func (c *UsersSettingsForwardingAddressesCreateCall) Do(opts ...googleapi.CallOp
 	}
 	return ret, nil
 	// {
-	//   "description": "Creates a forwarding address. If ownership verification is required, a message will be sent to the recipient and the resource's verification status will be set to pending; otherwise, the resource will be created with verification status set to accepted.",
+	//   "description": "Creates a forwarding address. If ownership verification is required, a message will be sent to the recipient and the resource's verification status will be set to pending; otherwise, the resource will be created with verification status set to accepted.\n\nThis method is only available to service account clients that have been delegated domain-wide authority.",
 	//   "httpMethod": "POST",
 	//   "id": "gmail.users.settings.forwardingAddresses.create",
 	//   "parameterOrder": [
@@ -7839,10 +8700,14 @@ type UsersSettingsForwardingAddressesDeleteCall struct {
 	forwardingEmail string
 	urlParams_      gensupport.URLParams
 	ctx_            context.Context
+	header_         http.Header
 }
 
 // Delete: Deletes the specified forwarding address and revokes any
 // verification that may have been required.
+//
+// This method is only available to service account clients that have
+// been delegated domain-wide authority.
 func (r *UsersSettingsForwardingAddressesService) Delete(userId string, forwardingEmail string) *UsersSettingsForwardingAddressesDeleteCall {
 	c := &UsersSettingsForwardingAddressesDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -7866,9 +8731,22 @@ func (c *UsersSettingsForwardingAddressesDeleteCall) Context(ctx context.Context
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsForwardingAddressesDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsForwardingAddressesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/forwardingAddresses/{forwardingEmail}")
@@ -7895,7 +8773,7 @@ func (c *UsersSettingsForwardingAddressesDeleteCall) Do(opts ...googleapi.CallOp
 	}
 	return nil
 	// {
-	//   "description": "Deletes the specified forwarding address and revokes any verification that may have been required.",
+	//   "description": "Deletes the specified forwarding address and revokes any verification that may have been required.\n\nThis method is only available to service account clients that have been delegated domain-wide authority.",
 	//   "httpMethod": "DELETE",
 	//   "id": "gmail.users.settings.forwardingAddresses.delete",
 	//   "parameterOrder": [
@@ -7934,6 +8812,7 @@ type UsersSettingsForwardingAddressesGetCall struct {
 	urlParams_      gensupport.URLParams
 	ifNoneMatch_    string
 	ctx_            context.Context
+	header_         http.Header
 }
 
 // Get: Gets the specified forwarding address.
@@ -7970,9 +8849,22 @@ func (c *UsersSettingsForwardingAddressesGetCall) Context(ctx context.Context) *
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsForwardingAddressesGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsForwardingAddressesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -8071,6 +8963,7 @@ type UsersSettingsForwardingAddressesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the forwarding addresses for the specified account.
@@ -8106,9 +8999,22 @@ func (c *UsersSettingsForwardingAddressesListCall) Context(ctx context.Context) 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsForwardingAddressesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsForwardingAddressesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -8199,6 +9105,7 @@ type UsersSettingsSendAsCreateCall struct {
 	sendas     *SendAs
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Create: Creates a custom "from" send-as alias. If an SMTP MSA is
@@ -8209,6 +9116,9 @@ type UsersSettingsSendAsCreateCall struct {
 // pending; otherwise, the resource will be created with verification
 // status set to accepted. If a signature is provided, Gmail will
 // sanitize the HTML before saving it with the alias.
+//
+// This method is only available to service account clients that have
+// been delegated domain-wide authority.
 func (r *UsersSettingsSendAsService) Create(userId string, sendas *SendAs) *UsersSettingsSendAsCreateCall {
 	c := &UsersSettingsSendAsCreateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -8232,9 +9142,22 @@ func (c *UsersSettingsSendAsCreateCall) Context(ctx context.Context) *UsersSetti
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsCreateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsSendAsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.sendas)
 	if err != nil {
@@ -8290,7 +9213,7 @@ func (c *UsersSettingsSendAsCreateCall) Do(opts ...googleapi.CallOption) (*SendA
 	}
 	return ret, nil
 	// {
-	//   "description": "Creates a custom \"from\" send-as alias. If an SMTP MSA is specified, Gmail will attempt to connect to the SMTP service to validate the configuration before creating the alias. If ownership verification is required for the alias, a message will be sent to the email address and the resource's verification status will be set to pending; otherwise, the resource will be created with verification status set to accepted. If a signature is provided, Gmail will sanitize the HTML before saving it with the alias.",
+	//   "description": "Creates a custom \"from\" send-as alias. If an SMTP MSA is specified, Gmail will attempt to connect to the SMTP service to validate the configuration before creating the alias. If ownership verification is required for the alias, a message will be sent to the email address and the resource's verification status will be set to pending; otherwise, the resource will be created with verification status set to accepted. If a signature is provided, Gmail will sanitize the HTML before saving it with the alias.\n\nThis method is only available to service account clients that have been delegated domain-wide authority.",
 	//   "httpMethod": "POST",
 	//   "id": "gmail.users.settings.sendAs.create",
 	//   "parameterOrder": [
@@ -8327,10 +9250,14 @@ type UsersSettingsSendAsDeleteCall struct {
 	sendAsEmail string
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // Delete: Deletes the specified send-as alias. Revokes any verification
 // that may have been required for using it.
+//
+// This method is only available to service account clients that have
+// been delegated domain-wide authority.
 func (r *UsersSettingsSendAsService) Delete(userId string, sendAsEmail string) *UsersSettingsSendAsDeleteCall {
 	c := &UsersSettingsSendAsDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -8354,9 +9281,22 @@ func (c *UsersSettingsSendAsDeleteCall) Context(ctx context.Context) *UsersSetti
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsSendAsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/sendAs/{sendAsEmail}")
@@ -8383,7 +9323,7 @@ func (c *UsersSettingsSendAsDeleteCall) Do(opts ...googleapi.CallOption) error {
 	}
 	return nil
 	// {
-	//   "description": "Deletes the specified send-as alias. Revokes any verification that may have been required for using it.",
+	//   "description": "Deletes the specified send-as alias. Revokes any verification that may have been required for using it.\n\nThis method is only available to service account clients that have been delegated domain-wide authority.",
 	//   "httpMethod": "DELETE",
 	//   "id": "gmail.users.settings.sendAs.delete",
 	//   "parameterOrder": [
@@ -8422,6 +9362,7 @@ type UsersSettingsSendAsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets the specified send-as alias. Fails with an HTTP 404 error
@@ -8459,9 +9400,22 @@ func (c *UsersSettingsSendAsGetCall) Context(ctx context.Context) *UsersSettings
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsSendAsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -8560,6 +9514,7 @@ type UsersSettingsSendAsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the send-as aliases for the specified account. The result
@@ -8597,9 +9552,22 @@ func (c *UsersSettingsSendAsListCall) Context(ctx context.Context) *UsersSetting
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsSendAsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -8691,11 +9659,15 @@ type UsersSettingsSendAsPatchCall struct {
 	sendas      *SendAs
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // Patch: Updates a send-as alias. If a signature is provided, Gmail
-// will sanitize the HTML before saving it with the alias. This method
-// supports patch semantics.
+// will sanitize the HTML before saving it with the alias.
+//
+// Addresses other than the primary address for the account can only be
+// updated by service account clients that have been delegated
+// domain-wide authority. This method supports patch semantics.
 func (r *UsersSettingsSendAsService) Patch(userId string, sendAsEmail string, sendas *SendAs) *UsersSettingsSendAsPatchCall {
 	c := &UsersSettingsSendAsPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -8720,9 +9692,22 @@ func (c *UsersSettingsSendAsPatchCall) Context(ctx context.Context) *UsersSettin
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsPatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsSendAsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.sendas)
 	if err != nil {
@@ -8779,7 +9764,7 @@ func (c *UsersSettingsSendAsPatchCall) Do(opts ...googleapi.CallOption) (*SendAs
 	}
 	return ret, nil
 	// {
-	//   "description": "Updates a send-as alias. If a signature is provided, Gmail will sanitize the HTML before saving it with the alias. This method supports patch semantics.",
+	//   "description": "Updates a send-as alias. If a signature is provided, Gmail will sanitize the HTML before saving it with the alias.\n\nAddresses other than the primary address for the account can only be updated by service account clients that have been delegated domain-wide authority. This method supports patch semantics.",
 	//   "httpMethod": "PATCH",
 	//   "id": "gmail.users.settings.sendAs.patch",
 	//   "parameterOrder": [
@@ -8825,10 +9810,15 @@ type UsersSettingsSendAsUpdateCall struct {
 	sendas      *SendAs
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // Update: Updates a send-as alias. If a signature is provided, Gmail
 // will sanitize the HTML before saving it with the alias.
+//
+// Addresses other than the primary address for the account can only be
+// updated by service account clients that have been delegated
+// domain-wide authority.
 func (r *UsersSettingsSendAsService) Update(userId string, sendAsEmail string, sendas *SendAs) *UsersSettingsSendAsUpdateCall {
 	c := &UsersSettingsSendAsUpdateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -8853,9 +9843,22 @@ func (c *UsersSettingsSendAsUpdateCall) Context(ctx context.Context) *UsersSetti
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsSendAsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.sendas)
 	if err != nil {
@@ -8912,7 +9915,7 @@ func (c *UsersSettingsSendAsUpdateCall) Do(opts ...googleapi.CallOption) (*SendA
 	}
 	return ret, nil
 	// {
-	//   "description": "Updates a send-as alias. If a signature is provided, Gmail will sanitize the HTML before saving it with the alias.",
+	//   "description": "Updates a send-as alias. If a signature is provided, Gmail will sanitize the HTML before saving it with the alias.\n\nAddresses other than the primary address for the account can only be updated by service account clients that have been delegated domain-wide authority.",
 	//   "httpMethod": "PUT",
 	//   "id": "gmail.users.settings.sendAs.update",
 	//   "parameterOrder": [
@@ -8957,10 +9960,14 @@ type UsersSettingsSendAsVerifyCall struct {
 	sendAsEmail string
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // Verify: Sends a verification email to the specified send-as alias
 // address. The verification status must be pending.
+//
+// This method is only available to service account clients that have
+// been delegated domain-wide authority.
 func (r *UsersSettingsSendAsService) Verify(userId string, sendAsEmail string) *UsersSettingsSendAsVerifyCall {
 	c := &UsersSettingsSendAsVerifyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.userId = userId
@@ -8984,9 +9991,22 @@ func (c *UsersSettingsSendAsVerifyCall) Context(ctx context.Context) *UsersSetti
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsVerifyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersSettingsSendAsVerifyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/sendAs/{sendAsEmail}/verify")
@@ -9013,7 +10033,7 @@ func (c *UsersSettingsSendAsVerifyCall) Do(opts ...googleapi.CallOption) error {
 	}
 	return nil
 	// {
-	//   "description": "Sends a verification email to the specified send-as alias address. The verification status must be pending.",
+	//   "description": "Sends a verification email to the specified send-as alias address. The verification status must be pending.\n\nThis method is only available to service account clients that have been delegated domain-wide authority.",
 	//   "httpMethod": "POST",
 	//   "id": "gmail.users.settings.sendAs.verify",
 	//   "parameterOrder": [
@@ -9043,6 +10063,708 @@ func (c *UsersSettingsSendAsVerifyCall) Do(opts ...googleapi.CallOption) error {
 
 }
 
+// method id "gmail.users.settings.sendAs.smimeInfo.delete":
+
+type UsersSettingsSendAsSmimeInfoDeleteCall struct {
+	s           *Service
+	userId      string
+	sendAsEmail string
+	id          string
+	urlParams_  gensupport.URLParams
+	ctx_        context.Context
+	header_     http.Header
+}
+
+// Delete: Deletes the specified S/MIME config for the specified send-as
+// alias.
+func (r *UsersSettingsSendAsSmimeInfoService) Delete(userId string, sendAsEmail string, id string) *UsersSettingsSendAsSmimeInfoDeleteCall {
+	c := &UsersSettingsSendAsSmimeInfoDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.userId = userId
+	c.sendAsEmail = sendAsEmail
+	c.id = id
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *UsersSettingsSendAsSmimeInfoDeleteCall) Fields(s ...googleapi.Field) *UsersSettingsSendAsSmimeInfoDeleteCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *UsersSettingsSendAsSmimeInfoDeleteCall) Context(ctx context.Context) *UsersSettingsSendAsSmimeInfoDeleteCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsSmimeInfoDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *UsersSettingsSendAsSmimeInfoDeleteCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("DELETE", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"userId":      c.userId,
+		"sendAsEmail": c.sendAsEmail,
+		"id":          c.id,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "gmail.users.settings.sendAs.smimeInfo.delete" call.
+func (c *UsersSettingsSendAsSmimeInfoDeleteCall) Do(opts ...googleapi.CallOption) error {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if err != nil {
+		return err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return err
+	}
+	return nil
+	// {
+	//   "description": "Deletes the specified S/MIME config for the specified send-as alias.",
+	//   "httpMethod": "DELETE",
+	//   "id": "gmail.users.settings.sendAs.smimeInfo.delete",
+	//   "parameterOrder": [
+	//     "userId",
+	//     "sendAsEmail",
+	//     "id"
+	//   ],
+	//   "parameters": {
+	//     "id": {
+	//       "description": "The immutable ID for the SmimeInfo.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "sendAsEmail": {
+	//       "description": "The email address that appears in the \"From:\" header for mail sent using this alias.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "userId": {
+	//       "default": "me",
+	//       "description": "The user's email address. The special value me can be used to indicate the authenticated user.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}",
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/gmail.settings.basic",
+	//     "https://www.googleapis.com/auth/gmail.settings.sharing"
+	//   ]
+	// }
+
+}
+
+// method id "gmail.users.settings.sendAs.smimeInfo.get":
+
+type UsersSettingsSendAsSmimeInfoGetCall struct {
+	s            *Service
+	userId       string
+	sendAsEmail  string
+	id           string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// Get: Gets the specified S/MIME config for the specified send-as
+// alias.
+func (r *UsersSettingsSendAsSmimeInfoService) Get(userId string, sendAsEmail string, id string) *UsersSettingsSendAsSmimeInfoGetCall {
+	c := &UsersSettingsSendAsSmimeInfoGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.userId = userId
+	c.sendAsEmail = sendAsEmail
+	c.id = id
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *UsersSettingsSendAsSmimeInfoGetCall) Fields(s ...googleapi.Field) *UsersSettingsSendAsSmimeInfoGetCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *UsersSettingsSendAsSmimeInfoGetCall) IfNoneMatch(entityTag string) *UsersSettingsSendAsSmimeInfoGetCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *UsersSettingsSendAsSmimeInfoGetCall) Context(ctx context.Context) *UsersSettingsSendAsSmimeInfoGetCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsSmimeInfoGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *UsersSettingsSendAsSmimeInfoGetCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"userId":      c.userId,
+		"sendAsEmail": c.sendAsEmail,
+		"id":          c.id,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "gmail.users.settings.sendAs.smimeInfo.get" call.
+// Exactly one of *SmimeInfo or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *SmimeInfo.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *UsersSettingsSendAsSmimeInfoGetCall) Do(opts ...googleapi.CallOption) (*SmimeInfo, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &SmimeInfo{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := json.NewDecoder(res.Body).Decode(target); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Gets the specified S/MIME config for the specified send-as alias.",
+	//   "httpMethod": "GET",
+	//   "id": "gmail.users.settings.sendAs.smimeInfo.get",
+	//   "parameterOrder": [
+	//     "userId",
+	//     "sendAsEmail",
+	//     "id"
+	//   ],
+	//   "parameters": {
+	//     "id": {
+	//       "description": "The immutable ID for the SmimeInfo.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "sendAsEmail": {
+	//       "description": "The email address that appears in the \"From:\" header for mail sent using this alias.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "userId": {
+	//       "default": "me",
+	//       "description": "The user's email address. The special value me can be used to indicate the authenticated user.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}",
+	//   "response": {
+	//     "$ref": "SmimeInfo"
+	//   },
+	//   "scopes": [
+	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.modify",
+	//     "https://www.googleapis.com/auth/gmail.readonly",
+	//     "https://www.googleapis.com/auth/gmail.settings.basic",
+	//     "https://www.googleapis.com/auth/gmail.settings.sharing"
+	//   ]
+	// }
+
+}
+
+// method id "gmail.users.settings.sendAs.smimeInfo.insert":
+
+type UsersSettingsSendAsSmimeInfoInsertCall struct {
+	s           *Service
+	userId      string
+	sendAsEmail string
+	smimeinfo   *SmimeInfo
+	urlParams_  gensupport.URLParams
+	ctx_        context.Context
+	header_     http.Header
+}
+
+// Insert: Insert (upload) the given S/MIME config for the specified
+// send-as alias. Note that pkcs12 format is required for the key.
+func (r *UsersSettingsSendAsSmimeInfoService) Insert(userId string, sendAsEmail string, smimeinfo *SmimeInfo) *UsersSettingsSendAsSmimeInfoInsertCall {
+	c := &UsersSettingsSendAsSmimeInfoInsertCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.userId = userId
+	c.sendAsEmail = sendAsEmail
+	c.smimeinfo = smimeinfo
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *UsersSettingsSendAsSmimeInfoInsertCall) Fields(s ...googleapi.Field) *UsersSettingsSendAsSmimeInfoInsertCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *UsersSettingsSendAsSmimeInfoInsertCall) Context(ctx context.Context) *UsersSettingsSendAsSmimeInfoInsertCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsSmimeInfoInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *UsersSettingsSendAsSmimeInfoInsertCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.smimeinfo)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"userId":      c.userId,
+		"sendAsEmail": c.sendAsEmail,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "gmail.users.settings.sendAs.smimeInfo.insert" call.
+// Exactly one of *SmimeInfo or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *SmimeInfo.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *UsersSettingsSendAsSmimeInfoInsertCall) Do(opts ...googleapi.CallOption) (*SmimeInfo, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &SmimeInfo{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := json.NewDecoder(res.Body).Decode(target); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Insert (upload) the given S/MIME config for the specified send-as alias. Note that pkcs12 format is required for the key.",
+	//   "httpMethod": "POST",
+	//   "id": "gmail.users.settings.sendAs.smimeInfo.insert",
+	//   "parameterOrder": [
+	//     "userId",
+	//     "sendAsEmail"
+	//   ],
+	//   "parameters": {
+	//     "sendAsEmail": {
+	//       "description": "The email address that appears in the \"From:\" header for mail sent using this alias.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "userId": {
+	//       "default": "me",
+	//       "description": "The user's email address. The special value me can be used to indicate the authenticated user.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo",
+	//   "request": {
+	//     "$ref": "SmimeInfo"
+	//   },
+	//   "response": {
+	//     "$ref": "SmimeInfo"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/gmail.settings.basic",
+	//     "https://www.googleapis.com/auth/gmail.settings.sharing"
+	//   ]
+	// }
+
+}
+
+// method id "gmail.users.settings.sendAs.smimeInfo.list":
+
+type UsersSettingsSendAsSmimeInfoListCall struct {
+	s            *Service
+	userId       string
+	sendAsEmail  string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// List: Lists S/MIME configs for the specified send-as alias.
+func (r *UsersSettingsSendAsSmimeInfoService) List(userId string, sendAsEmail string) *UsersSettingsSendAsSmimeInfoListCall {
+	c := &UsersSettingsSendAsSmimeInfoListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.userId = userId
+	c.sendAsEmail = sendAsEmail
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *UsersSettingsSendAsSmimeInfoListCall) Fields(s ...googleapi.Field) *UsersSettingsSendAsSmimeInfoListCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *UsersSettingsSendAsSmimeInfoListCall) IfNoneMatch(entityTag string) *UsersSettingsSendAsSmimeInfoListCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *UsersSettingsSendAsSmimeInfoListCall) Context(ctx context.Context) *UsersSettingsSendAsSmimeInfoListCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsSmimeInfoListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *UsersSettingsSendAsSmimeInfoListCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"userId":      c.userId,
+		"sendAsEmail": c.sendAsEmail,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "gmail.users.settings.sendAs.smimeInfo.list" call.
+// Exactly one of *ListSmimeInfoResponse or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *ListSmimeInfoResponse.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *UsersSettingsSendAsSmimeInfoListCall) Do(opts ...googleapi.CallOption) (*ListSmimeInfoResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &ListSmimeInfoResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := json.NewDecoder(res.Body).Decode(target); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Lists S/MIME configs for the specified send-as alias.",
+	//   "httpMethod": "GET",
+	//   "id": "gmail.users.settings.sendAs.smimeInfo.list",
+	//   "parameterOrder": [
+	//     "userId",
+	//     "sendAsEmail"
+	//   ],
+	//   "parameters": {
+	//     "sendAsEmail": {
+	//       "description": "The email address that appears in the \"From:\" header for mail sent using this alias.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "userId": {
+	//       "default": "me",
+	//       "description": "The user's email address. The special value me can be used to indicate the authenticated user.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo",
+	//   "response": {
+	//     "$ref": "ListSmimeInfoResponse"
+	//   },
+	//   "scopes": [
+	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.modify",
+	//     "https://www.googleapis.com/auth/gmail.readonly",
+	//     "https://www.googleapis.com/auth/gmail.settings.basic",
+	//     "https://www.googleapis.com/auth/gmail.settings.sharing"
+	//   ]
+	// }
+
+}
+
+// method id "gmail.users.settings.sendAs.smimeInfo.setDefault":
+
+type UsersSettingsSendAsSmimeInfoSetDefaultCall struct {
+	s           *Service
+	userId      string
+	sendAsEmail string
+	id          string
+	urlParams_  gensupport.URLParams
+	ctx_        context.Context
+	header_     http.Header
+}
+
+// SetDefault: Sets the default S/MIME config for the specified send-as
+// alias.
+func (r *UsersSettingsSendAsSmimeInfoService) SetDefault(userId string, sendAsEmail string, id string) *UsersSettingsSendAsSmimeInfoSetDefaultCall {
+	c := &UsersSettingsSendAsSmimeInfoSetDefaultCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.userId = userId
+	c.sendAsEmail = sendAsEmail
+	c.id = id
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *UsersSettingsSendAsSmimeInfoSetDefaultCall) Fields(s ...googleapi.Field) *UsersSettingsSendAsSmimeInfoSetDefaultCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *UsersSettingsSendAsSmimeInfoSetDefaultCall) Context(ctx context.Context) *UsersSettingsSendAsSmimeInfoSetDefaultCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersSettingsSendAsSmimeInfoSetDefaultCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *UsersSettingsSendAsSmimeInfoSetDefaultCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}/setDefault")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"userId":      c.userId,
+		"sendAsEmail": c.sendAsEmail,
+		"id":          c.id,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "gmail.users.settings.sendAs.smimeInfo.setDefault" call.
+func (c *UsersSettingsSendAsSmimeInfoSetDefaultCall) Do(opts ...googleapi.CallOption) error {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if err != nil {
+		return err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return err
+	}
+	return nil
+	// {
+	//   "description": "Sets the default S/MIME config for the specified send-as alias.",
+	//   "httpMethod": "POST",
+	//   "id": "gmail.users.settings.sendAs.smimeInfo.setDefault",
+	//   "parameterOrder": [
+	//     "userId",
+	//     "sendAsEmail",
+	//     "id"
+	//   ],
+	//   "parameters": {
+	//     "id": {
+	//       "description": "The immutable ID for the SmimeInfo.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "sendAsEmail": {
+	//       "description": "The email address that appears in the \"From:\" header for mail sent using this alias.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "userId": {
+	//       "default": "me",
+	//       "description": "The user's email address. The special value me can be used to indicate the authenticated user.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}/setDefault",
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/gmail.settings.basic",
+	//     "https://www.googleapis.com/auth/gmail.settings.sharing"
+	//   ]
+	// }
+
+}
+
 // method id "gmail.users.threads.delete":
 
 type UsersThreadsDeleteCall struct {
@@ -9051,6 +10773,7 @@ type UsersThreadsDeleteCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Immediately and permanently deletes the specified thread.
@@ -9078,9 +10801,22 @@ func (c *UsersThreadsDeleteCall) Context(ctx context.Context) *UsersThreadsDelet
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersThreadsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersThreadsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/threads/{id}")
@@ -9146,6 +10882,7 @@ type UsersThreadsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Gets the specified thread.
@@ -9201,9 +10938,22 @@ func (c *UsersThreadsGetCall) Context(ctx context.Context) *UsersThreadsGetCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersThreadsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersThreadsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -9308,6 +11058,7 @@ func (c *UsersThreadsGetCall) Do(opts ...googleapi.CallOption) (*Thread, error) 
 	//   },
 	//   "scopes": [
 	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -9323,6 +11074,7 @@ type UsersThreadsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists the threads in the user's mailbox.
@@ -9363,6 +11115,8 @@ func (c *UsersThreadsListCall) PageToken(pageToken string) *UsersThreadsListCall
 // Q sets the optional parameter "q": Only return threads matching the
 // specified query. Supports the same query format as the Gmail search
 // box. For example, "from:someuser@example.com rfc822msgid: is:unread".
+// Parameter cannot be used when accessing the api using the
+// gmail.metadata scope.
 func (c *UsersThreadsListCall) Q(q string) *UsersThreadsListCall {
 	c.urlParams_.Set("q", q)
 	return c
@@ -9394,9 +11148,22 @@ func (c *UsersThreadsListCall) Context(ctx context.Context) *UsersThreadsListCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersThreadsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersThreadsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -9482,7 +11249,7 @@ func (c *UsersThreadsListCall) Do(opts ...googleapi.CallOption) (*ListThreadsRes
 	//       "type": "string"
 	//     },
 	//     "q": {
-	//       "description": "Only return threads matching the specified query. Supports the same query format as the Gmail search box. For example, \"from:someuser@example.com rfc822msgid: is:unread\".",
+	//       "description": "Only return threads matching the specified query. Supports the same query format as the Gmail search box. For example, \"from:someuser@example.com rfc822msgid: is:unread\". Parameter cannot be used when accessing the api using the gmail.metadata scope.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -9500,6 +11267,7 @@ func (c *UsersThreadsListCall) Do(opts ...googleapi.CallOption) (*ListThreadsRes
 	//   },
 	//   "scopes": [
 	//     "https://mail.google.com/",
+	//     "https://www.googleapis.com/auth/gmail.metadata",
 	//     "https://www.googleapis.com/auth/gmail.modify",
 	//     "https://www.googleapis.com/auth/gmail.readonly"
 	//   ]
@@ -9537,6 +11305,7 @@ type UsersThreadsModifyCall struct {
 	modifythreadrequest *ModifyThreadRequest
 	urlParams_          gensupport.URLParams
 	ctx_                context.Context
+	header_             http.Header
 }
 
 // Modify: Modifies the labels applied to the thread. This applies to
@@ -9565,9 +11334,22 @@ func (c *UsersThreadsModifyCall) Context(ctx context.Context) *UsersThreadsModif
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersThreadsModifyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersThreadsModifyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.modifythreadrequest)
 	if err != nil {
@@ -9669,6 +11451,7 @@ type UsersThreadsTrashCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Trash: Moves the specified thread to the trash.
@@ -9695,9 +11478,22 @@ func (c *UsersThreadsTrashCall) Context(ctx context.Context) *UsersThreadsTrashC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersThreadsTrashCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersThreadsTrashCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/threads/{id}/trash")
@@ -9791,6 +11587,7 @@ type UsersThreadsUntrashCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Untrash: Removes the specified thread from the trash.
@@ -9817,9 +11614,22 @@ func (c *UsersThreadsUntrashCall) Context(ctx context.Context) *UsersThreadsUntr
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *UsersThreadsUntrashCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *UsersThreadsUntrashCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "{userId}/threads/{id}/untrash")

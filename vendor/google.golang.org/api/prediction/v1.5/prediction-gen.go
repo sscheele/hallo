@@ -71,9 +71,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Hostedmodels *HostedmodelsService
 
@@ -85,6 +86,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewHostedmodelsService(s *Service) *HostedmodelsService {
@@ -318,6 +323,22 @@ func (s *AnalyzeDataDescriptionFeaturesNumeric) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+func (s *AnalyzeDataDescriptionFeaturesNumeric) UnmarshalJSON(data []byte) error {
+	type noMethod AnalyzeDataDescriptionFeaturesNumeric
+	var s1 struct {
+		Mean     gensupport.JSONFloat64 `json:"mean"`
+		Variance gensupport.JSONFloat64 `json:"variance"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.Mean = float64(s1.Mean)
+	s.Variance = float64(s1.Variance)
+	return nil
+}
+
 // AnalyzeDataDescriptionFeaturesText: Description of multiple-word text
 // values of this feature.
 type AnalyzeDataDescriptionFeaturesText struct {
@@ -412,6 +433,22 @@ func (s *AnalyzeDataDescriptionOutputFeatureNumeric) MarshalJSON() ([]byte, erro
 	type noMethod AnalyzeDataDescriptionOutputFeatureNumeric
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+func (s *AnalyzeDataDescriptionOutputFeatureNumeric) UnmarshalJSON(data []byte) error {
+	type noMethod AnalyzeDataDescriptionOutputFeatureNumeric
+	var s1 struct {
+		Mean     gensupport.JSONFloat64 `json:"mean"`
+		Variance gensupport.JSONFloat64 `json:"variance"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.Mean = float64(s1.Mean)
+	s.Variance = float64(s1.Variance)
+	return nil
 }
 
 type AnalyzeDataDescriptionOutputFeatureText struct {
@@ -629,6 +666,20 @@ func (s *Output) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+func (s *Output) UnmarshalJSON(data []byte) error {
+	type noMethod Output
+	var s1 struct {
+		OutputValue gensupport.JSONFloat64 `json:"outputValue"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.OutputValue = float64(s1.OutputValue)
+	return nil
+}
+
 type OutputOutputMulti struct {
 	// Label: The class label.
 	Label string `json:"label,omitempty"`
@@ -657,6 +708,20 @@ func (s *OutputOutputMulti) MarshalJSON() ([]byte, error) {
 	type noMethod OutputOutputMulti
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+func (s *OutputOutputMulti) UnmarshalJSON(data []byte) error {
+	type noMethod OutputOutputMulti
+	var s1 struct {
+		Score gensupport.JSONFloat64 `json:"score"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.Score = float64(s1.Score)
+	return nil
 }
 
 type Training struct {
@@ -786,6 +851,24 @@ func (s *TrainingModelInfo) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+func (s *TrainingModelInfo) UnmarshalJSON(data []byte) error {
+	type noMethod TrainingModelInfo
+	var s1 struct {
+		ClassWeightedAccuracy  gensupport.JSONFloat64 `json:"classWeightedAccuracy"`
+		ClassificationAccuracy gensupport.JSONFloat64 `json:"classificationAccuracy"`
+		MeanSquaredError       gensupport.JSONFloat64 `json:"meanSquaredError"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.ClassWeightedAccuracy = float64(s1.ClassWeightedAccuracy)
+	s.ClassificationAccuracy = float64(s1.ClassificationAccuracy)
+	s.MeanSquaredError = float64(s1.MeanSquaredError)
+	return nil
+}
+
 type TrainingTrainingInstances struct {
 	// CsvInstance: The input features for this instance
 	CsvInstance []interface{} `json:"csvInstance,omitempty"`
@@ -858,6 +941,7 @@ type HostedmodelsPredictCall struct {
 	input           *Input
 	urlParams_      gensupport.URLParams
 	ctx_            context.Context
+	header_         http.Header
 }
 
 // Predict: Submit input and request an output against a hosted model.
@@ -884,9 +968,22 @@ func (c *HostedmodelsPredictCall) Context(ctx context.Context) *HostedmodelsPred
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *HostedmodelsPredictCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *HostedmodelsPredictCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.input)
 	if err != nil {
@@ -978,6 +1075,7 @@ type TrainedmodelsAnalyzeCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Analyze: Get analysis of the model and the data the model was trained
@@ -1014,9 +1112,22 @@ func (c *TrainedmodelsAnalyzeCall) Context(ctx context.Context) *TrainedmodelsAn
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TrainedmodelsAnalyzeCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TrainedmodelsAnalyzeCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1102,6 +1213,7 @@ type TrainedmodelsDeleteCall struct {
 	id         string
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Delete a trained model.
@@ -1127,9 +1239,22 @@ func (c *TrainedmodelsDeleteCall) Context(ctx context.Context) *TrainedmodelsDel
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TrainedmodelsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TrainedmodelsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "trainedmodels/{id}")
@@ -1185,6 +1310,7 @@ type TrainedmodelsGetCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Get: Check training status of your model.
@@ -1220,9 +1346,22 @@ func (c *TrainedmodelsGetCall) Context(ctx context.Context) *TrainedmodelsGetCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TrainedmodelsGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TrainedmodelsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1308,6 +1447,7 @@ type TrainedmodelsInsertCall struct {
 	training   *Training
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Begin training your model.
@@ -1333,9 +1473,22 @@ func (c *TrainedmodelsInsertCall) Context(ctx context.Context) *TrainedmodelsIns
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TrainedmodelsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TrainedmodelsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.training)
 	if err != nil {
@@ -1415,6 +1568,7 @@ type TrainedmodelsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: List available models.
@@ -1462,9 +1616,22 @@ func (c *TrainedmodelsListCall) Context(ctx context.Context) *TrainedmodelsListC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TrainedmodelsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TrainedmodelsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -1572,6 +1739,7 @@ type TrainedmodelsPredictCall struct {
 	input      *Input
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Predict: Submit model id and request a prediction.
@@ -1598,9 +1766,22 @@ func (c *TrainedmodelsPredictCall) Context(ctx context.Context) *TrainedmodelsPr
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TrainedmodelsPredictCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TrainedmodelsPredictCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.input)
 	if err != nil {
@@ -1692,6 +1873,7 @@ type TrainedmodelsUpdateCall struct {
 	update     *Update
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Add new data to a trained model.
@@ -1718,9 +1900,22 @@ func (c *TrainedmodelsUpdateCall) Context(ctx context.Context) *TrainedmodelsUpd
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TrainedmodelsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *TrainedmodelsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.update)
 	if err != nil {
